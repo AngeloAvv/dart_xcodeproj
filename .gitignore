@@ -1,0 +1,15 @@
+.dart_tool/
+.packages
+build/
+pubspec.lock
+doc/api/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+.vscode/
+.planning/
+
+# AI assistant artifacts (local only)
+.claude/
+CLAUDE.md

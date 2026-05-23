@@ -1,0 +1,9 @@
+platforms:
+  - vm
+
+reporter: expanded
+
+timeout: 30s
+
+paths:
+  - test/

@@ -1,0 +1,3 @@
+#include "Base.xcconfig"
+OTHER_CFLAGS = -Wall
+PODS_ROOT = $(SRCROOT)/Vendor

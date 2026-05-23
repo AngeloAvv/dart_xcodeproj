@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:App.xcodeproj">
+   </FileRef>
+   <Group
+      location = "container:Subprojects"
+      name = "Subprojects">
+      <FileRef
+         location = "group:Subprojects/Lib.xcodeproj">
+      </FileRef>
+   </Group>
+</Workspace>
