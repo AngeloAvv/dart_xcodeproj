@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+### Bug Fixes
+
+- Export all scheme types from public barrel (`BuildableProductRunnable`, `BuildableReference`, `BuildAction`, `LaunchAction`, `TestAction`, `AnalyzeAction`, `ArchiveAction`, `ProfileAction`, and related types)
+
 ## 0.1.0
 
 Initial release. Dart library for parsing and working with Xcode projects, heavily inspired by CocoaPods XcodeProj and xcode.
