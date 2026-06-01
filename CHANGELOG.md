@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- Updated `propertylistserialization` and `xml` dependencies to latest versions
+
 ## 0.1.1
 
 ### Bug Fixes

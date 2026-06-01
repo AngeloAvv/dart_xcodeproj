@@ -3,7 +3,7 @@ description: >-
   Dart library for parsing and working with Xcode projects. Manipulates
   .xcodeproj, .xcworkspace, .xcscheme, and .xcconfig files. Pure Dart,
   cross-platform (macOS, Windows, Linux), zero native code.
-version: 0.1.1
+version: 0.2.0
 repository: https://github.com/AngeloAvv/dart_xcodeproj
 homepage: https://github.com/AngeloAvv/dart_xcodeproj
 
@@ -17,10 +17,10 @@ environment:
   sdk: ">=3.9.0 <4.0.0"
 
 dependencies:
-  propertylistserialization: ^1.4.1
+  propertylistserialization: ^1.5.0
   crypto: ^3.0.7
   path: ^1.9.1
-  xml: ^6.6.1
+  xml: ^7.0.0
   args: '>=2.4.2 <3.0.0'
   mason_logger: ^0.3.3
   yaml_writer: ^2.1.0
