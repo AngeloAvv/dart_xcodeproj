@@ -2,6 +2,7 @@
 
 import 'package:xml/xml.dart';
 
+import 'buildable_reference.dart';
 import 'xml_element_wrapper.dart';
 
 /// Wraps an `<ActionContent>` XML element for
@@ -46,6 +47,27 @@ class ShellScriptActionContent extends XmlElementWrapper {
       xmlElement.removeAttribute('shellToInvoke');
     } else {
       xmlElement.setAttribute('shellToInvoke', v);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // BuildableReference
+  // ---------------------------------------------------------------------------
+
+  /// The Xcode target this shell script runs within the build environment of.
+  /// Returns null if no `<EnvironmentBuildable>` child is present.
+  BuildableReference? get buildableReference {
+    final env = xmlElement.findElements('EnvironmentBuildable').firstOrNull;
+    final el = env?.findElements('BuildableReference').firstOrNull;
+    return el != null ? BuildableReference(el) : null;
+  }
+
+  set buildableReference(BuildableReference? ref) {
+    xmlElement.findElements('EnvironmentBuildable').firstOrNull?.remove();
+    if (ref != null) {
+      final env = XmlElement(XmlName('EnvironmentBuildable'));
+      env.children.add(ref.xmlElement.copy());
+      xmlElement.children.add(env);
     }
   }
 }

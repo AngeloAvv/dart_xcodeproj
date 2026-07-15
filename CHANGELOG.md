@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+
+### Bug Fixes
+
+- `EnvironmentVariables.assignVariable` and `CommandLineArguments.assignArgument` now replace any existing entry with the same key/argument instead of appending a duplicate, matching xcodeproj's update-by-key semantics
+
+### Features
+
+- `TestAction` now exposes `macroExpansions` and `addMacroExpansion`, matching CocoaPods xcodeproj's `TestAction#add_macro_expansion` (inserted before `Testables` when present)
+- `ShellScriptActionContent` now exposes `buildableReference` (get/set), matching xcodeproj's `ShellScriptActionContent#buildable_reference`, so a pre/post-build shell script can run within a specific target's build environment
+- `TestAction` now exposes `codeCoverageTargets`/`addCodeCoverageTarget`, matching xcodeproj's per-target code coverage filtering (flips `onlyGenerateCoverageForSpecifiedTargets`)
+- `TestableReference` now exposes `parallelizable`, `testExecutionOrdering`/`randomized`, `skippedTests`/`addSkippedTest`, `selectedTests`/`addSelectedTest`, `useTestSelectionWhitelist`, and `removeBuildableReference`, matching xcodeproj's test-selection and execution controls
+
 ## 0.2.0
 
 - Updated `propertylistserialization` and `xml` dependencies to latest versions

@@ -2,6 +2,7 @@
 
 [![pub package](https://img.shields.io/pub/v/dart_xcodeproj.svg)](https://pub.dev/packages/dart_xcodeproj)
 [![Build](https://github.com/AngeloAvv/dart_xcodeproj/actions/workflows/default.yml/badge.svg)](https://github.com/AngeloAvv/dart_xcodeproj/actions/workflows/default.yml)
+[![codecov](https://codecov.io/gh/AngeloAvv/dart_xcodeproj/graph/badge.svg)](https://codecov.io/gh/AngeloAvv/dart_xcodeproj)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A Dart library for parsing and working with Xcode projects. Manipulate

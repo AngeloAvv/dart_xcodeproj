@@ -2,11 +2,14 @@
 // Tests are written BEFORE the implementation. All tests should fail (RED).
 
 import 'package:dart_xcodeproj/src/scheme/test_action.dart';
+import 'package:dart_xcodeproj/src/scheme/buildable_reference.dart';
 import 'package:dart_xcodeproj/src/scheme/environment_variables.dart';
 import 'package:dart_xcodeproj/src/scheme/command_line_arguments.dart';
 import 'package:dart_xcodeproj/src/scheme/execution_action.dart';
+import 'package:dart_xcodeproj/src/scheme/macro_expansion.dart';
 import 'package:dart_xcodeproj/src/scheme/xc_scheme.dart';
 import 'package:test/test.dart';
+import 'package:xml/xml.dart';
 
 void main() {
   // -------------------------------------------------------------------------
@@ -128,6 +131,98 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
+  // TestAction addMacroExpansion
+  // -------------------------------------------------------------------------
+
+  group('TestAction addMacroExpansion', () {
+    test('macroExpansions returns empty list by default', () {
+      final a = TestAction();
+      expect(a.macroExpansions, isEmpty);
+    });
+
+    test(
+      'addMacroExpansion mutates and appears in subsequent macroExpansions call',
+      () {
+        final a = TestAction();
+        final me = MacroExpansion();
+        me.setBuildableReference(BuildableReference());
+        a.addMacroExpansion(me);
+        expect(a.macroExpansions.length, equals(1));
+      },
+    );
+
+    test('addMacroExpansion is inserted before the Testables element', () {
+      final a = TestAction();
+      final ref = TestableReference();
+      a.addTestable(ref);
+
+      final me = MacroExpansion();
+      me.setBuildableReference(BuildableReference());
+      a.addMacroExpansion(me);
+
+      final childTags = a.xmlElement.children
+          .whereType<XmlElement>()
+          .map((e) => e.name.local)
+          .toList();
+      expect(
+        childTags.indexOf('MacroExpansion') < childTags.indexOf('Testables'),
+        isTrue,
+      );
+    });
+
+    test('addMacroExpansion appends when no Testables element is present', () {
+      final a = TestAction(XmlElement(XmlName('TestAction')));
+      final me = MacroExpansion();
+      me.setBuildableReference(BuildableReference());
+      a.addMacroExpansion(me);
+      expect(a.macroExpansions.length, equals(1));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // TestAction addCodeCoverageTarget / codeCoverageTargets
+  // -------------------------------------------------------------------------
+
+  group('TestAction codeCoverageTargets', () {
+    test('codeCoverageTargets returns empty list by default', () {
+      final a = TestAction();
+      expect(a.codeCoverageTargets, isEmpty);
+    });
+
+    test(
+      'addCodeCoverageTarget mutates and flips onlyGenerateCoverageForSpecifiedTargets',
+      () {
+        final a = TestAction();
+        final ref = BuildableReference();
+        ref.setReferenceTarget(
+          'ABC',
+          'Runner.app',
+          'Runner',
+          'container:Runner.xcodeproj',
+        );
+        a.addCodeCoverageTarget(ref);
+        expect(a.codeCoverageTargets.length, equals(1));
+        expect(
+          a.xmlElement.getAttribute('onlyGenerateCoverageForSpecifiedTargets'),
+          equals('YES'),
+        );
+      },
+    );
+
+    test('codeCoverageTargets setter replaces existing targets', () {
+      final a = TestAction();
+      final ref1 = BuildableReference()
+        ..setReferenceTarget('A', 'A.app', 'A', 'container:A.xcodeproj');
+      final ref2 = BuildableReference()
+        ..setReferenceTarget('B', 'B.app', 'B', 'container:B.xcodeproj');
+      a.addCodeCoverageTarget(ref1);
+      a.codeCoverageTargets = [ref2];
+      expect(a.codeCoverageTargets.length, equals(1));
+      expect(a.codeCoverageTargets.first.blueprintIdentifier, equals('B'));
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // TestableReference
   // -------------------------------------------------------------------------
 
@@ -164,6 +259,97 @@ void main() {
       r.skipped = true;
       expect(r.xmlElement.getAttribute('skipped'), equals('YES'));
     });
+  });
+
+  group('TestableReference parallelizable / execution ordering', () {
+    test('parallelizable defaults to false', () {
+      final r = TestableReference();
+      expect(r.parallelizable, isFalse);
+    });
+
+    test('parallelizable setter writes YES', () {
+      final r = TestableReference();
+      r.parallelizable = true;
+      expect(r.xmlElement.getAttribute('parallelizable'), equals('YES'));
+    });
+
+    test('testExecutionOrdering defaults to null', () {
+      final r = TestableReference();
+      expect(r.testExecutionOrdering, isNull);
+    });
+
+    test('randomized is true when testExecutionOrdering is random', () {
+      final r = TestableReference();
+      r.testExecutionOrdering = 'random';
+      expect(r.randomized, isTrue);
+    });
+
+    test('randomized is false otherwise', () {
+      final r = TestableReference();
+      expect(r.randomized, isFalse);
+    });
+  });
+
+  group('TestableReference removeBuildableReference', () {
+    test('removes a previously added reference', () {
+      final r = TestableReference();
+      final ref = BuildableReference();
+      ref.setReferenceTarget('ABC', 'A.app', 'A', 'container:A.xcodeproj');
+      r.addBuildableReference(ref);
+      expect(r.buildableReferences.length, equals(1));
+      r.removeBuildableReference(r.buildableReferences.first);
+      expect(r.buildableReferences, isEmpty);
+    });
+  });
+
+  group('TestableReference skippedTests', () {
+    test('skippedTests returns empty list by default', () {
+      final r = TestableReference();
+      expect(r.skippedTests, isEmpty);
+    });
+
+    test(
+      'addSkippedTest mutates and appears in subsequent skippedTests call',
+      () {
+        final r = TestableReference();
+        final t = Test()..identifier = 'MyTests/testFoo';
+        r.addSkippedTest(t);
+        expect(r.skippedTests.length, equals(1));
+        expect(r.skippedTests.first.identifier, equals('MyTests/testFoo'));
+      },
+    );
+  });
+
+  group('TestableReference selectedTests / useTestSelectionWhitelist', () {
+    test('useTestSelectionWhitelist defaults to false', () {
+      final r = TestableReference();
+      expect(r.useTestSelectionWhitelist, isFalse);
+    });
+
+    test('useTestSelectionWhitelist setter writes YES', () {
+      final r = TestableReference();
+      r.useTestSelectionWhitelist = true;
+      expect(
+        r.xmlElement.getAttribute('useTestSelectionWhitelist'),
+        equals('YES'),
+      );
+    });
+
+    test('selectedTests returns empty list by default', () {
+      final r = TestableReference();
+      expect(r.selectedTests, isEmpty);
+    });
+
+    test(
+      'addSelectedTest mutates and appears in subsequent selectedTests call',
+      () {
+        final r = TestableReference();
+        final t = Test()..identifier = 'MyTests/testBar';
+        r.addSelectedTest(t);
+        expect(r.selectedTests.length, equals(1));
+        expect(r.selectedTests.first.identifier, equals('MyTests/testBar'));
+      },
+    );
   });
 
   // -------------------------------------------------------------------------

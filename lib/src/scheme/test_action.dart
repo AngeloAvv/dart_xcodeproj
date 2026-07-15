@@ -6,6 +6,7 @@ import 'abstract_scheme_action.dart';
 import 'buildable_reference.dart';
 import 'command_line_arguments.dart';
 import 'environment_variables.dart';
+import 'macro_expansion.dart';
 import 'xml_element_wrapper.dart';
 
 /// Wraps a `<TestAction>` XML element in a `.xcscheme` file.
@@ -69,6 +70,30 @@ class TestAction extends AbstractSchemeAction {
   }
 
   // ---------------------------------------------------------------------------
+  // MacroExpansion
+  // ---------------------------------------------------------------------------
+
+  /// The list of [MacroExpansion] elements associated with this test action.
+  List<MacroExpansion> get macroExpansions => xmlElement
+      .findElements('MacroExpansion')
+      .map(MacroExpansion.new)
+      .toList();
+
+  /// Adds a [MacroExpansion], inserted before the `<Testables>` container
+  /// when present, matching xcodeproj's `TestAction#add_macro_expansion`.
+  void addMacroExpansion(MacroExpansion macroExpansion) {
+    final testables = xmlElement.findElements('Testables').firstOrNull;
+    if (testables != null) {
+      xmlElement.children.insert(
+        xmlElement.children.indexOf(testables),
+        macroExpansion.xmlElement.copy(),
+      );
+    } else {
+      xmlElement.children.add(macroExpansion.xmlElement.copy());
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // EnvironmentVariables
   // ---------------------------------------------------------------------------
 
@@ -103,6 +128,47 @@ class TestAction extends AbstractSchemeAction {
       xmlElement.children.add(v.xmlElement.copy());
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // CodeCoverageTargets
+  // ---------------------------------------------------------------------------
+
+  /// The list of [BuildableReference] (code coverage targets) associated
+  /// with this test action.
+  List<BuildableReference> get codeCoverageTargets {
+    final container = xmlElement
+        .findElements('CodeCoverageTargets')
+        .firstOrNull;
+    if (container == null) return <BuildableReference>[];
+    return container
+        .findElements('BuildableReference')
+        .map(BuildableReference.new)
+        .toList();
+  }
+
+  /// Sets the list of code coverage targets, replacing any existing ones,
+  /// and flips `onlyGenerateCoverageForSpecifiedTargets` to true.
+  set codeCoverageTargets(List<BuildableReference> targets) {
+    xmlElement.setAttribute('onlyGenerateCoverageForSpecifiedTargets', 'YES');
+    xmlElement.findElements('CodeCoverageTargets').firstOrNull?.remove();
+    final container = XmlElement(XmlName('CodeCoverageTargets'));
+    for (final target in targets) {
+      container.children.add(target.xmlElement.copy());
+    }
+    xmlElement.children.add(container);
+  }
+
+  /// Adds a [BuildableReference] (code coverage target) to this test action,
+  /// and flips `onlyGenerateCoverageForSpecifiedTargets` to true.
+  void addCodeCoverageTarget(BuildableReference target) {
+    xmlElement.setAttribute('onlyGenerateCoverageForSpecifiedTargets', 'YES');
+    var container = xmlElement.findElements('CodeCoverageTargets').firstOrNull;
+    if (container == null) {
+      container = XmlElement(XmlName('CodeCoverageTargets'));
+      xmlElement.children.add(container);
+    }
+    container.children.add(target.xmlElement.copy());
+  }
 }
 
 /// Wraps a `<TestableReference>` XML element.
@@ -133,5 +199,94 @@ class TestableReference extends XmlElementWrapper {
 
   void addBuildableReference(BuildableReference ref) {
     xmlElement.children.add(ref.xmlElement.copy());
+  }
+
+  void removeBuildableReference(BuildableReference ref) {
+    ref.xmlElement.remove();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Parallelization / execution ordering
+  // ---------------------------------------------------------------------------
+
+  bool get parallelizable =>
+      stringToBool(xmlElement.getAttribute('parallelizable') ?? 'NO');
+  set parallelizable(bool v) =>
+      xmlElement.setAttribute('parallelizable', boolToString(v));
+
+  String? get testExecutionOrdering =>
+      xmlElement.getAttribute('testExecutionOrdering');
+  set testExecutionOrdering(String? v) {
+    if (v == null) {
+      xmlElement.removeAttribute('testExecutionOrdering');
+    } else {
+      xmlElement.setAttribute('testExecutionOrdering', v);
+    }
+  }
+
+  bool get randomized => testExecutionOrdering == 'random';
+
+  // ---------------------------------------------------------------------------
+  // SkippedTests
+  // ---------------------------------------------------------------------------
+
+  List<Test> get skippedTests {
+    final container = xmlElement.findElements('SkippedTests').firstOrNull;
+    if (container == null) return <Test>[];
+    return container.findElements('Test').map(Test.new).toList();
+  }
+
+  void addSkippedTest(Test test) {
+    var container = xmlElement.findElements('SkippedTests').firstOrNull;
+    if (container == null) {
+      container = XmlElement(XmlName('SkippedTests'));
+      xmlElement.children.add(container);
+    }
+    container.children.add(test.xmlElement.copy());
+  }
+
+  // ---------------------------------------------------------------------------
+  // SelectedTests / whitelist
+  // ---------------------------------------------------------------------------
+
+  bool get useTestSelectionWhitelist => stringToBool(
+    xmlElement.getAttribute('useTestSelectionWhitelist') ?? 'NO',
+  );
+  set useTestSelectionWhitelist(bool v) =>
+      xmlElement.setAttribute('useTestSelectionWhitelist', boolToString(v));
+
+  List<Test> get selectedTests {
+    final container = xmlElement.findElements('SelectedTests').firstOrNull;
+    if (container == null) return <Test>[];
+    return container.findElements('Test').map(Test.new).toList();
+  }
+
+  void addSelectedTest(Test test) {
+    var container = xmlElement.findElements('SelectedTests').firstOrNull;
+    if (container == null) {
+      container = XmlElement(XmlName('SelectedTests'));
+      xmlElement.children.add(container);
+    }
+    container.children.add(test.xmlElement.copy());
+  }
+}
+
+/// Wraps a `<Test>` XML element, identifying a single test case referenced
+/// from `<SkippedTests>` or `<SelectedTests>`.
+class Test extends XmlElementWrapper {
+  static const String _tag = 'Test';
+
+  Test([XmlElement? el]) {
+    createXmlElementWithFallback(el, _tag, () {});
+  }
+
+  /// The fully-qualified identifier of the test class/method.
+  String? get identifier => xmlElement.getAttribute('Identifier');
+  set identifier(String? v) {
+    if (v == null) {
+      xmlElement.removeAttribute('Identifier');
+    } else {
+      xmlElement.setAttribute('Identifier', v);
+    }
   }
 }
