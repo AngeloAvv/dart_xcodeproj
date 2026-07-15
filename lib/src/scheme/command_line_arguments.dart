@@ -25,8 +25,9 @@ class CommandLineArguments extends XmlElementWrapper {
       .map(CommandLineArgument.new)
       .toList();
 
-  /// Adds an argument (appends the xmlElement child).
+  /// Adds an argument, replacing any existing entry with the same argument string.
   void assignArgument(CommandLineArgument a) {
+    removeArgument(a.argument);
     xmlElement.children.add(a.xmlElement.copy());
   }
 

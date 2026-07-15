@@ -151,6 +151,22 @@ void main() {
       expect(evs['MISSING'], isNull);
     });
 
+    test('assignVariable replaces existing entry with same key', () {
+      final evs = EnvironmentVariables();
+      evs.assignVariable(
+        EnvironmentVariable()
+          ..key = 'X'
+          ..value = 'first',
+      );
+      evs.assignVariable(
+        EnvironmentVariable()
+          ..key = 'X'
+          ..value = 'second',
+      );
+      expect(evs.allVariables.length, equals(1));
+      expect(evs['X']!.value, equals('second'));
+    });
+
     test('removeVariable removes by key', () {
       final evs = EnvironmentVariables();
       final ev = EnvironmentVariable()
@@ -220,6 +236,25 @@ void main() {
       ca.assignArgument(cl);
       expect(ca.allArguments, isA<List<CommandLineArgument>>());
     });
+
+    test(
+      'assignArgument replaces existing entry with same argument string',
+      () {
+        final ca = CommandLineArguments();
+        ca.assignArgument(
+          CommandLineArgument()
+            ..argument = '--foo'
+            ..isEnabled = false,
+        );
+        ca.assignArgument(
+          CommandLineArgument()
+            ..argument = '--foo'
+            ..isEnabled = true,
+        );
+        expect(ca.allArguments.length, equals(1));
+        expect(ca.allArguments.first.isEnabled, isTrue);
+      },
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -340,6 +375,69 @@ void main() {
         expect(content.title, equals('Pre-Test Script'));
         expect(content.scriptText, equals('echo pre-test'));
         expect(content.shellToInvoke, equals('/bin/sh'));
+      },
+    );
+
+    test('buildableReference defaults to null', () {
+      final s = ShellScriptActionContent();
+      expect(s.buildableReference, isNull);
+    });
+
+    test(
+      'buildableReference setter/getter roundtrips via EnvironmentBuildable',
+      () {
+        final s = ShellScriptActionContent();
+        final ref = BuildableReference();
+        ref.setReferenceTarget(
+          'ABC123',
+          'Runner.app',
+          'Runner',
+          'container:Runner.xcodeproj',
+        );
+        s.buildableReference = ref;
+
+        final env = s.xmlElement
+            .findElements('EnvironmentBuildable')
+            .firstOrNull;
+        expect(env, isNotNull);
+        expect(env!.findElements('BuildableReference').length, equals(1));
+        expect(s.buildableReference, isNotNull);
+        expect(s.buildableReference!.blueprintIdentifier, equals('ABC123'));
+      },
+    );
+
+    test('buildableReference setter with null clears EnvironmentBuildable', () {
+      final s = ShellScriptActionContent();
+      final ref = BuildableReference();
+      ref.setReferenceTarget(
+        'ABC123',
+        'Runner.app',
+        'Runner',
+        'container:Runner.xcodeproj',
+      );
+      s.buildableReference = ref;
+      s.buildableReference = null;
+      expect(s.xmlElement.findElements('EnvironmentBuildable'), isEmpty);
+    });
+
+    test(
+      'buildableReference setter removes duplicate EnvironmentBuildable elements',
+      () {
+        final s = ShellScriptActionContent();
+        s.xmlElement.children.add(XmlElement(XmlName('EnvironmentBuildable')));
+        s.xmlElement.children.add(XmlElement(XmlName('EnvironmentBuildable')));
+        final ref = BuildableReference();
+        ref.setReferenceTarget(
+          'ABC123',
+          'Runner.app',
+          'Runner',
+          'container:Runner.xcodeproj',
+        );
+        s.buildableReference = ref;
+        expect(
+          s.xmlElement.findElements('EnvironmentBuildable').length,
+          equals(1),
+        );
       },
     );
   });

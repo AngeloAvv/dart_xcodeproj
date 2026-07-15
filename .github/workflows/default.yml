@@ -20,11 +20,37 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     needs: analyze
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
       - run: dart pub get
-      - run: dart test
+      - name: Install junitreport
+        run: |
+          dart pub global activate junitreport
+          echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
+      - name: Install lcov
+        run: sudo apt-get update && sudo apt-get install -y lcov
+      - name: Run Tests
+        run: set -o pipefail; dart test --reporter json --coverage=coverage | tojunit -o report.xml
+      - name: Format coverage
+        run: dart run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib --check-ignore
+      - name: Coverage summary
+        run: lcov --summary coverage/lcov.info
+      - name: Enforce coverage threshold
+        run: lcov --summary coverage/lcov.info --fail-under-lines 75
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          files: coverage/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload test results to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          files: report.xml
+          report_type: test_results
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   dry_run_publish:
     name: Dry-run publish check

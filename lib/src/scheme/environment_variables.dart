@@ -25,8 +25,9 @@ class EnvironmentVariables extends XmlElementWrapper {
       .map(EnvironmentVariable.new)
       .toList();
 
-  /// Adds a variable (appends the xmlElement child).
+  /// Adds a variable, replacing any existing entry with the same key.
   void assignVariable(EnvironmentVariable v) {
+    removeVariable(v.key);
     xmlElement.children.add(v.xmlElement.copy());
   }
 
