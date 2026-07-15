@@ -22,7 +22,7 @@ library and CLI.
 
 ```yaml
 dependencies:
-  dart_xcodeproj: ^0.2.0
+  dart_xcodeproj: ^0.3.0
 ```
 
 Or via the command line:
