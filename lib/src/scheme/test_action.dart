@@ -201,8 +201,16 @@ class TestableReference extends XmlElementWrapper {
     xmlElement.children.add(ref.xmlElement.copy());
   }
 
+  /// Removes the buildable reference(s) matching [ref]'s content. [ref] need
+  /// not be the same element instance added via [addBuildableReference]
+  /// (that method stores a copy), so removal matches by XML content.
   void removeBuildableReference(BuildableReference ref) {
-    ref.xmlElement.remove();
+    final target = ref.xmlElement.toXmlString();
+    xmlElement
+        .findElements('BuildableReference')
+        .where((e) => e.toXmlString() == target)
+        .toList()
+        .forEach((e) => e.remove());
   }
 
   // ---------------------------------------------------------------------------

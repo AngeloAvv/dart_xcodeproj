@@ -419,6 +419,27 @@ void main() {
       s.buildableReference = null;
       expect(s.xmlElement.findElements('EnvironmentBuildable'), isEmpty);
     });
+
+    test(
+      'buildableReference setter removes duplicate EnvironmentBuildable elements',
+      () {
+        final s = ShellScriptActionContent();
+        s.xmlElement.children.add(XmlElement(XmlName('EnvironmentBuildable')));
+        s.xmlElement.children.add(XmlElement(XmlName('EnvironmentBuildable')));
+        final ref = BuildableReference();
+        ref.setReferenceTarget(
+          'ABC123',
+          'Runner.app',
+          'Runner',
+          'container:Runner.xcodeproj',
+        );
+        s.buildableReference = ref;
+        expect(
+          s.xmlElement.findElements('EnvironmentBuildable').length,
+          equals(1),
+        );
+      },
+    );
   });
 
   // -------------------------------------------------------------------------

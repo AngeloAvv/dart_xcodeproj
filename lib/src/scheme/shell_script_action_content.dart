@@ -63,7 +63,10 @@ class ShellScriptActionContent extends XmlElementWrapper {
   }
 
   set buildableReference(BuildableReference? ref) {
-    xmlElement.findElements('EnvironmentBuildable').firstOrNull?.remove();
+    xmlElement
+        .findElements('EnvironmentBuildable')
+        .toList()
+        .forEach((e) => e.remove());
     if (ref != null) {
       final env = XmlElement(XmlName('EnvironmentBuildable'));
       env.children.add(ref.xmlElement.copy());

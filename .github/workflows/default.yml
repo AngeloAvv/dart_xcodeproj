@@ -20,6 +20,8 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     needs: analyze
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
@@ -37,14 +39,17 @@ jobs:
       - name: Coverage summary
         run: lcov --summary coverage/lcov.info
       - name: Enforce coverage threshold
-        uses: VeryGoodOpenSource/very_good_coverage@v3
-        with:
-          path: coverage/lcov.info
-          min_coverage: 75
-      - name: Upload to Codecov
+        run: lcov --summary coverage/lcov.info --fail-under-lines 75
+      - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
-          files: report.xml, coverage/lcov.info
+          files: coverage/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload test results to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          files: report.xml
+          report_type: test_results
           token: ${{ secrets.CODECOV_TOKEN }}
 
   dry_run_publish:

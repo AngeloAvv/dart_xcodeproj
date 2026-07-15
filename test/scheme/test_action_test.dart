@@ -300,6 +300,19 @@ void main() {
       r.removeBuildableReference(r.buildableReferences.first);
       expect(r.buildableReferences, isEmpty);
     });
+
+    test(
+      'removes using the original ref instance passed to addBuildableReference',
+      () {
+        final r = TestableReference();
+        final ref = BuildableReference();
+        ref.setReferenceTarget('ABC', 'A.app', 'A', 'container:A.xcodeproj');
+        r.addBuildableReference(ref);
+        expect(r.buildableReferences.length, equals(1));
+        r.removeBuildableReference(ref);
+        expect(r.buildableReferences, isEmpty);
+      },
+    );
   });
 
   group('TestableReference skippedTests', () {
