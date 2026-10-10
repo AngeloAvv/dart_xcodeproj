@@ -6,6 +6,7 @@ import 'pbx_container_item_proxy.dart';
 import 'pbx_target_dependency.dart';
 import 'xc_configuration_list.dart';
 import 'xc_swift_package_product_dependency.dart';
+
 // NOTE: DO NOT import pbx_project.dart — sibling. Runtime ISA scan used instead.
 
 // =============================================================================
