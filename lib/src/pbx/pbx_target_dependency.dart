@@ -96,6 +96,11 @@ class PBXTargetDependency extends AbstractObject {
   @override
   String get displayName => name ?? _target?.displayName ?? super.displayName;
 
+  /// Annotation is always the bare ISA, e.g. `' PBXTargetDependency '`.
+  /// Port of `PBXTargetDependency#ascii_plist_annotation`.
+  @override
+  String get asciiPlistAnnotation => ' $isa ';
+
   // ---------------------------------------------------------------------------
   // Serialization
   // ---------------------------------------------------------------------------

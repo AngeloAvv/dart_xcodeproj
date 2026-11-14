@@ -65,6 +65,11 @@ class PBXContainerItemProxy extends AbstractObject {
   @override
   String get isa => isaStatic;
 
+  /// Annotation is always the bare ISA, e.g. `' PBXContainerItemProxy '`.
+  /// Port of `PBXContainerItemProxy#ascii_plist_annotation`.
+  @override
+  String get asciiPlistAnnotation => ' $isa ';
+
   @override
   List<String> get attributeOrder => [
     ..._ownAttributes,

@@ -9,6 +9,8 @@
 // - Indentation uses TAB characters (\t), NOT spaces
 // - Annotations (/* ... */) are reconstructed from the objects graph
 
+import 'package:path/path.dart' as p;
+
 import 'unicode.dart';
 
 /// Serializes a parsed plist [Map] back to Apple ASCII plist text.
@@ -114,17 +116,29 @@ class AsciiPlistWriter {
             if (fileUuid is! String) continue;
             final fileObj = _objects[fileUuid];
             if (fileObj is! Map) continue;
+            // Ruby's PBXBuildFile#display_name prefers productRef (SPM
+            // product dependencies have no fileRef) over fileRef.
+            final productRef = fileObj['productRef'] as String?;
             final fileRef = fileObj['fileRef'] as String?;
-            if (fileRef == null) continue;
-            final refObj = _objects[fileRef];
             String? refLabel;
-            if (refObj is Map) {
-              final name = refObj['name'];
-              if (name is String && name.isNotEmpty) {
-                refLabel = name;
-              } else {
-                final path = refObj['path'];
-                if (path is String && path.isNotEmpty) refLabel = path;
+            if (productRef != null) {
+              final productObj = _objects[productRef];
+              if (productObj is Map) {
+                final productName = productObj['productName'];
+                if (productName is String && productName.isNotEmpty) {
+                  refLabel = productName;
+                }
+              }
+            } else if (fileRef != null) {
+              final refObj = _objects[fileRef];
+              if (refObj is Map) {
+                final name = refObj['name'];
+                if (name is String && name.isNotEmpty) {
+                  refLabel = name;
+                } else {
+                  final path = refObj['path'];
+                  if (path is String && path.isNotEmpty) refLabel = path;
+                }
               }
             }
             if (refLabel != null && phaseName != null) {
@@ -186,7 +200,8 @@ class AsciiPlistWriter {
   /// - PBXFrameworksBuildPhase → "Frameworks"
   /// - PBXCopyFilesBuildPhase → "CopyFiles"
   /// - PBXHeadersBuildPhase → "Headers"
-  /// - PBXShellScriptBuildPhase → uses name attr (always present)
+  /// - PBXShellScriptBuildPhase → "ShellScript" (Xcode always writes a name,
+  ///   but Ruby's `display_name` falls back to the stripped ISA)
   String? _phaseNameFor(Map<dynamic, dynamic> obj) {
     final name = obj['name'];
     if (name is String && name.isNotEmpty) return name;
@@ -197,6 +212,7 @@ class AsciiPlistWriter {
       'PBXFrameworksBuildPhase' => 'Frameworks',
       'PBXCopyFilesBuildPhase' => 'CopyFiles',
       'PBXHeadersBuildPhase' => 'Headers',
+      'PBXShellScriptBuildPhase' => 'ShellScript',
       _ => null,
     };
   }
@@ -586,6 +602,34 @@ class AsciiPlistWriter {
 
     final obj = _objects[uuid];
     if (obj is! Map) return null;
+
+    // Per-class overrides of Ruby's `ascii_plist_annotation`
+    // (the full object-model port lives in the `asciiPlistAnnotation` getters).
+    final isa = obj['isa'] as String? ?? '';
+    switch (isa) {
+      case 'PBXContainerItemProxy':
+      case 'PBXTargetDependency':
+        return isa;
+      case 'XCSwiftPackageProductDependency':
+        final productName = obj['productName'];
+        if (productName is String && productName.isNotEmpty) {
+          return productName;
+        }
+      case 'XCLocalSwiftPackageReference':
+        final relativePath = obj['relativePath'];
+        if (relativePath is String && relativePath.isNotEmpty) {
+          return '$isa "${p.basename(relativePath)}"';
+        }
+      case 'XCRemoteSwiftPackageReference':
+        final url = obj['repositoryURL'];
+        if (url is String && url.isNotEmpty) {
+          var base = p.basename(url);
+          if (base.endsWith('.git') && base.length > 4) {
+            base = base.substring(0, base.length - 4);
+          }
+          return '$isa "$base"';
+        }
+    }
 
     // Build phase default names (used when `name` attr is absent in the plist)
     // PBXSourcesBuildPhase, PBXResourcesBuildPhase, PBXFrameworksBuildPhase

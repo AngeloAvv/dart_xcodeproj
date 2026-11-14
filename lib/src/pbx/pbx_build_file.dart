@@ -96,13 +96,21 @@ class PBXBuildFile extends AbstractObject {
     ...super.attributeOrder,
   ];
 
+  /// Name shown for this build file: the [productRef]'s display name when set
+  /// (SPM product dependencies have no [fileRef]), else the [fileRef]'s
+  /// display name, else the ISA-derived default.
+  /// Port of `PBXBuildFile#display_name`.
+  @override
+  String get displayName =>
+      productRef?.displayName ?? fileRef?.displayName ?? super.displayName;
+
   /// Inline annotation for the ASCII plist writer.
   /// When the build file has been added to a build phase (referrer present),
   /// returns `' $displayName in ${phase.displayName} '`.
   /// Otherwise returns `' $displayName '`.
   /// scans [_referrers] for any `AbstractObject` as the parent phase.
   /// GroupableHelper wiring is deferred.
-  /// Port of.
+  /// Port of `PBXBuildFile#ascii_plist_annotation`.
   @override
   String get asciiPlistAnnotation {
     final phase = referrers.whereType<AbstractObject>().firstOrNull;

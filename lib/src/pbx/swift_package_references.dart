@@ -1,5 +1,7 @@
 // Ruby sources:
 
+import 'package:path/path.dart' as p;
+
 import '../object/abstract_object.dart';
 
 // =============================================================================
@@ -50,6 +52,24 @@ class XCRemoteSwiftPackageReference extends AbstractObject {
 
   @override
   String get isa => isaStatic;
+
+  /// The repository URL, falling back to the ISA-derived default.
+  /// Port of `XCRemoteSwiftPackageReference#display_name`.
+  @override
+  String get displayName => repositoryURL ?? super.displayName;
+
+  /// `' XCRemoteSwiftPackageReference "<repo name>" '`, where the repo name is
+  /// the basename of [displayName] without a trailing `.git`
+  /// (`File.basename(display_name, '.git')`).
+  /// Port of `XCRemoteSwiftPackageReference#ascii_plist_annotation`.
+  @override
+  String get asciiPlistAnnotation {
+    final base = p.basename(displayName);
+    final name = base.endsWith('.git') && base.length > '.git'.length
+        ? base.substring(0, base.length - '.git'.length)
+        : base;
+    return ' $isa "$name" ';
+  }
 
   @override
   List<String> get attributeOrder => [
@@ -128,6 +148,16 @@ class XCLocalSwiftPackageReference extends AbstractObject {
 
   @override
   String get isa => isaStatic;
+
+  /// The package's relative path, falling back to the ISA-derived default.
+  /// Port of `XCLocalSwiftPackageReference#display_name`.
+  @override
+  String get displayName => relativePath ?? super.displayName;
+
+  /// `' XCLocalSwiftPackageReference "<basename of path>" '`.
+  /// Port of `XCLocalSwiftPackageReference#ascii_plist_annotation`.
+  @override
+  String get asciiPlistAnnotation => ' $isa "${p.basename(displayName)}" ';
 
   @override
   List<String> get attributeOrder => [
