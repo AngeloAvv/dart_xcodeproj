@@ -4,6 +4,7 @@
 
 import 'dart:io';
 
+import 'package:dart_xcodeproj/src/object/abstract_object.dart';
 import 'package:dart_xcodeproj/src/object/isa_registry.dart';
 import 'package:dart_xcodeproj/src/pbx/group.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_build_file.dart';
@@ -34,9 +35,8 @@ void main() {
       isaRegistry.clear();
     });
 
-    T add<T extends Object>(T obj) {
-      final o = obj as dynamic;
-      graph.objectsByUuid[o.uuid as String] = o;
+    T add<T extends AbstractObject>(T obj) {
+      graph.objectsByUuid[obj.uuid] = obj;
       return obj;
     }
 
