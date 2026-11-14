@@ -82,6 +82,9 @@ abstract class AbstractBuildPhase extends AbstractObject {
     ...super.attributeOrder,
   ];
 
+  @override
+  List<String> get referenceAttributes => const [_kFiles];
+
   /// The phase's own `name` attribute, when its subclass declares one.
   /// Overridden by [PBXCopyFilesBuildPhase] and [PBXShellScriptBuildPhase].
   String? get _declaredName => null;

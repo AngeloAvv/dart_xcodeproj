@@ -186,6 +186,23 @@ class XCBuildConfiguration extends AbstractObject {
     ...super.attributeOrder,
   ];
 
+  /// The configuration [name] (`Debug`, `Release`, ...) when non-empty, else
+  /// the ISA-derived default.
+  /// Port of `AbstractObject#display_name` for an object with a `name`.
+  @override
+  String get displayName {
+    final declared = name;
+    return declared != null && declared.isNotEmpty
+        ? declared
+        : super.displayName;
+  }
+
+  @override
+  List<String> get referenceAttributes => const [
+    _kBaseConfigurationReference,
+    _kBaseConfigurationReferenceAnchor,
+  ];
+
   // ---------------------------------------------------------------------------
   // normalizeArraySettings helpers (private)
   // ---------------------------------------------------------------------------

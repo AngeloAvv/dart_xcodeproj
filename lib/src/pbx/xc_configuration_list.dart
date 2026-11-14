@@ -2,6 +2,8 @@
 
 import '../object/abstract_object.dart';
 import '../object/object_list.dart';
+import 'pbx_native_target.dart';
+import 'pbx_project.dart';
 import 'xc_build_configuration.dart';
 
 /// Maintains a collection of related build configurations for a project or target.
@@ -77,6 +79,33 @@ class XCConfigurationList extends AbstractObject {
     ..._ownAttributes,
     ...super.attributeOrder,
   ];
+
+  @override
+  List<String> get referenceAttributes => const [_kBuildConfigurations];
+
+  /// The project or target that owns this list, or `null` if none does.
+  /// Port of `XCConfigurationList#target`.
+  AbstractObject? get target => referrers
+      .whereType<AbstractObject>()
+      .where((r) => r is PBXProject || r is AbstractTarget)
+      .firstOrNull;
+
+  /// `' Build configuration list for <isa> "<name>" '`, naming the owning
+  /// project or target; `<deleted target>` if there is none.
+  /// Port of `XCConfigurationList#ascii_plist_annotation`.
+  @override
+  String get asciiPlistAnnotation {
+    final owner = target;
+    final name = switch (owner) {
+      PBXProject() => owner.name,
+      AbstractTarget() => owner.displayName,
+      _ => null,
+    };
+    if (owner == null) {
+      return ' Build configuration list for <deleted target> ';
+    }
+    return ' Build configuration list for ${owner.isa} "$name" ';
+  }
 
   // ---------------------------------------------------------------------------
   // Lookup helper

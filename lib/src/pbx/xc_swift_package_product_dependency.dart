@@ -65,6 +65,9 @@ class XCSwiftPackageProductDependency extends AbstractObject {
     ...super.attributeOrder,
   ];
 
+  @override
+  List<String> get referenceAttributes => const [_kPackage];
+
   // ---------------------------------------------------------------------------
   // Serialization
   // ---------------------------------------------------------------------------

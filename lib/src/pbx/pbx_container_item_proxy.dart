@@ -1,4 +1,9 @@
+import 'package:path/path.dart' as p;
+
 import '../object/abstract_object.dart';
+import '../plist/annotated_nodes.dart';
+import 'pbx_file_reference.dart';
+import 'pbx_project.dart';
 
 /// Represents a container item proxy used for cross-project target references.
 /// Port of [PBXContainerItemProxy].
@@ -69,6 +74,45 @@ class PBXContainerItemProxy extends AbstractObject {
   /// Port of `PBXContainerItemProxy#ascii_plist_annotation`.
   @override
   String get asciiPlistAnnotation => ' $isa ';
+
+  /// Whether the proxy points to another project: its [containerPortal] is
+  /// not the root object of this project.
+  /// Port of `PBXContainerItemProxy#remote?`.
+  bool get isRemote {
+    for (final object in project.objectsByUuid.values) {
+      if (object is PBXProject) return object.uuid != containerPortal;
+    }
+    return false;
+  }
+
+  /// The annotation of [containerPortal]: the project's own annotation for a
+  /// local proxy, else ` <file name> ` of the referenced `.xcodeproj` file.
+  /// Port of `PBXContainerItemProxy#container_portal_annotation`.
+  String? get containerPortalAnnotation {
+    final portal = containerPortal == null
+        ? null
+        : project.objectsByUuid[containerPortal];
+    if (!isRemote) return portal?.asciiPlistAnnotation;
+    if (portal is PBXFileReference && portal.path != null) {
+      return ' ${p.basename(portal.path!)} ';
+    }
+    return null;
+  }
+
+  /// [containerPortal] is a string attribute, but Xcode annotates it with the
+  /// container it names, so it is the one non-reference annotated value.
+  @override
+  Map<String, dynamic> toAsciiPlistHash() {
+    final hash = super.toAsciiPlistHash();
+    final portal = containerPortal;
+    if (portal != null) {
+      hash[_kContainerPortal] = AnnotatedString(
+        portal,
+        containerPortalAnnotation,
+      );
+    }
+    return hash;
+  }
 
   @override
   List<String> get attributeOrder => [

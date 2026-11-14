@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 
+import '../plist/annotated_nodes.dart';
 import 'isa_registry.dart';
 import 'object_dictionary.dart';
 import 'object_graph.dart';
@@ -161,8 +162,17 @@ abstract class AbstractObject {
   /// Inline annotation written in ASCII plist after each UUID reference.
   /// Format: ` $displayName ` (with one space on each side).
   /// `PBXBuildFile` overrides to add ` in $parent ` suffix.
-  /// Port of.
-  String get asciiPlistAnnotation => ' $displayName ';
+  /// Returns `null` for objects that carry no annotation (the main group).
+  /// Port of `ascii_plist_annotation`.
+  String? get asciiPlistAnnotation => ' $displayName ';
+
+  /// The plist keys of this class whose values are references to other
+  /// objects: to-one attributes (a UUID) and to-many attributes (a list of
+  /// UUIDs). [toAsciiPlistHash] annotates exactly these values.
+  /// Plain string attributes — even ones that hold a UUID, such as
+  /// `remoteGlobalIDString` — must never be listed here.
+  /// Port of Ruby's `to_one_attributes` and `to_many_attributes`.
+  List<String> get referenceAttributes => const [];
 
   /// The ordered list of plist attribute keys for this class.
   /// Base class returns const []. Each subclass overrides with:
@@ -197,6 +207,40 @@ abstract class AbstractObject {
     }
     return hash;
   }
+
+  /// The plist dictionary for the ASCII plist writer: like [toHash], but every
+  /// object reference is an [AnnotatedString] carrying the referenced object's
+  /// [asciiPlistAnnotation]. Plain attributes are left untouched.
+  /// Port of `to_hash_as(:to_ascii_plist)`.
+  Map<String, dynamic> toAsciiPlistHash() {
+    final hash = toHash();
+    for (final key in referenceAttributes) {
+      final value = hash[key];
+      if (value is String) {
+        hash[key] = annotatedReference(value);
+      } else if (value is List) {
+        hash[key] = [
+          for (final item in value)
+            item is String ? annotatedReference(item) : item,
+        ];
+      }
+    }
+    return hash;
+  }
+
+  /// [toAsciiPlistHash] annotated with this object's own [asciiPlistAnnotation].
+  /// Port of `to_ascii_plist`.
+  AnnotatedDictionary toAsciiPlist() =>
+      AnnotatedDictionary(toAsciiPlistHash(), asciiPlistAnnotation);
+
+  /// An [AnnotatedString] for a reference to the object with [referencedUuid],
+  /// annotated with that object's [asciiPlistAnnotation] (no annotation when
+  /// the object is not part of the project).
+  /// Port of `nested_object_for_hash(obj, :to_ascii_plist)`.
+  AnnotatedString annotatedReference(String referencedUuid) => AnnotatedString(
+    referencedUuid,
+    project.objectsByUuid[referencedUuid]?.asciiPlistAnnotation,
+  );
 
   /// Recursive plist representation with referenced objects expanded inline.
   /// Output shape:

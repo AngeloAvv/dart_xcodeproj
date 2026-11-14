@@ -96,6 +96,9 @@ class PBXBuildFile extends AbstractObject {
     ...super.attributeOrder,
   ];
 
+  @override
+  List<String> get referenceAttributes => const [_kFileRef, _kProductRef];
+
   /// Name shown for this build file: the [productRef]'s display name when set
   /// (SPM product dependencies have no [fileRef]), else the [fileRef]'s
   /// display name, else the ISA-derived default.

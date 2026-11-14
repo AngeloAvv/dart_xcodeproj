@@ -37,6 +37,9 @@ export 'src/pbx/pbx_file_system_synchronized_root_group.dart';
 export 'src/pbx/pbx_file_system_synchronized_exception_set.dart';
 export 'src/pbx/pbx_project.dart';
 
+// ---- ASCII plist nodes ----
+export 'src/plist/annotated_nodes.dart';
+
 // ---- Top-level containers ----
 export 'src/project/xcode_project.dart';
 export 'src/project/groups_position.dart';

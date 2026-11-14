@@ -95,6 +95,13 @@ abstract class AbstractTarget extends AbstractObject {
   ];
 
   @override
+  List<String> get referenceAttributes => const [
+    _kBuildConfigurationList,
+    _kBuildPhases,
+    _kDependencies,
+  ];
+
+  @override
   void initializeDefaults() {
     // buildPhases and dependencies are late final — do NOT reinitialize here.
   }
@@ -443,6 +450,15 @@ class PBXNativeTarget extends AbstractTarget {
   List<String> get attributeOrder => [
     ..._ownAttributes,
     ...super.attributeOrder,
+  ];
+
+  @override
+  List<String> get referenceAttributes => [
+    _kProductReference,
+    _kPackageProductDependencies,
+    _kFileSystemSynchronizedGroups,
+    _kBuildRules,
+    ...super.referenceAttributes,
   ];
 
   // ---------------------------------------------------------------------------

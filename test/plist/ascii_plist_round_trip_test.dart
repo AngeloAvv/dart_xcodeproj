@@ -2,47 +2,48 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:dart_xcodeproj/src/plist/ascii_plist_reader.dart';
 import 'package:dart_xcodeproj/src/plist/ascii_plist_writer.dart';
+import 'package:dart_xcodeproj/src/project/xcode_project.dart';
 
 void main() {
   group('ASCII plist round-trip', () {
-    test('simple.pbxproj parse → write produces byte-identical output', () {
-      final original = File('test/fixtures/simple.pbxproj').readAsStringSync();
-      final parsed = AsciiPlistReader(original).parse();
-      final written = AsciiPlistWriter().write(parsed);
-      expect(
-        written,
-        equals(original),
-        reason: 'simple.pbxproj must round-trip byte-identically',
-      );
-    });
+    // The writer prints only the annotations it is given, and the parser drops
+    // comments, so a raw parse -> write round trip is structural, not byte-wise.
+    // Byte-identity (comments included) is covered by the XcodeProject
+    // round trip below and by test/project/round_trip_golden_test.dart.
+    for (final name in ['simple', 'runner']) {
+      test('$name.pbxproj parse -> write -> parse yields the same plist', () {
+        final original = File('test/fixtures/$name.pbxproj').readAsStringSync();
+        final parsed = AsciiPlistReader(original).parse();
+        final written = AsciiPlistWriter().write(parsed);
+        expect(AsciiPlistReader(written).parse(), equals(parsed));
+        expect(
+          written,
+          isNot(contains('/* Project object */')),
+          reason: 'plain strings must never get a sniffed annotation',
+        );
+      });
+    }
 
-    test('runner.pbxproj parse → write produces byte-identical output', () {
-      final original = File('test/fixtures/runner.pbxproj').readAsStringSync();
-      final parsed = AsciiPlistReader(original).parse();
-      final written = AsciiPlistWriter().write(parsed);
-      // Compute a precise diff location on failure to aid debugging.
-      if (written != original) {
-        var idx = 0;
-        while (idx < written.length &&
-            idx < original.length &&
-            written[idx] == original[idx]) {
-          idx++;
-        }
-        final ctxStart = idx > 40 ? idx - 40 : 0;
-        final ctxEnd = idx + 40 < written.length ? idx + 40 : written.length;
-        final wctx = written.substring(ctxStart, ctxEnd);
-        final octx = original.substring(
-          ctxStart,
-          ctxEnd > original.length ? original.length : ctxEnd,
+    test(
+      'runner.pbxproj open -> save through XcodeProject is byte-identical',
+      () async {
+        final original = File(
+          'test/fixtures/runner.pbxproj',
+        ).readAsStringSync();
+        final dir = Directory.systemTemp.createTempSync('ascii_plist_rt_');
+        addTearDown(() => dir.deleteSync(recursive: true));
+        final bundle = Directory('${dir.path}/Runner.xcodeproj')..createSync();
+        File('${bundle.path}/project.pbxproj').writeAsStringSync(original);
+
+        final project = await XcodeProject.open(bundle.path);
+        await project.save();
+
+        expect(
+          File('${bundle.path}/project.pbxproj').readAsStringSync(),
+          equals(original),
         );
-        fail(
-          'runner.pbxproj round-trip mismatch at byte $idx\n'
-          ' expected: ${octx.replaceAll('\n', '\\n').replaceAll('\t', '\\t')}\n'
-          ' actual: ${wctx.replaceAll('\n', '\\n').replaceAll('\t', '\\t')}',
-        );
-      }
-      expect(written, equals(original));
-    });
+      },
+    );
 
     test('runner.pbxproj output starts with UTF8 magic comment', () {
       final original = File('test/fixtures/runner.pbxproj').readAsStringSync();

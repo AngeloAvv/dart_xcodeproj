@@ -82,6 +82,9 @@ class PBXFileSystemSynchronizedRootGroup extends AbstractObject {
   ];
 
   @override
+  List<String> get referenceAttributes => const [_kExceptions];
+
+  @override
   void initializeDefaults() {
     sourceTree = '<group>';
   }

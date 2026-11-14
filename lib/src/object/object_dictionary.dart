@@ -2,6 +2,7 @@
 
 import 'dart:developer' as developer;
 
+import '../plist/annotated_nodes.dart';
 import 'abstract_object.dart';
 
 /// Keyed collection of object references with reference-count hooks on
@@ -126,6 +127,24 @@ class ObjectDictionary {
       final value = entry.value;
       if (value != null) {
         result[entry.key] = value.uuid;
+      }
+    }
+    return result;
+  }
+
+  /// Plist representation for the ASCII plist writer: {key: reference} for
+  /// each non-null entry, where the reference is an [AnnotatedString] carrying
+  /// the value's `asciiPlistAnnotation`.
+  /// Port of `to_ascii_plist` (`Nanaimo::String.new(obj.uuid, obj.ascii_plist_annotation)`).
+  Map<String, dynamic> toAsciiPlist() {
+    final result = <String, dynamic>{};
+    for (final entry in _values.entries) {
+      final value = entry.value;
+      if (value != null) {
+        result[entry.key] = AnnotatedString(
+          value.uuid,
+          value.asciiPlistAnnotation,
+        );
       }
     }
     return result;

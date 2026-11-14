@@ -2,6 +2,7 @@
 // Port of writer behavior tests
 
 import 'package:test/test.dart';
+import 'package:dart_xcodeproj/src/plist/annotated_nodes.dart';
 import 'package:dart_xcodeproj/src/plist/ascii_plist_writer.dart';
 
 void main() {
@@ -225,119 +226,145 @@ void main() {
     });
 
     // -------------------------------------------------------------------------
-    // Test 15: UUID-valued attributes get annotation from referenced object
+    // Test 15: only AnnotatedString values carry an annotation
     // -------------------------------------------------------------------------
-    test(
-      'Test 15: fileRef UUID gets annotation from referenced object name',
-      () {
-        final out = AsciiPlistWriter().write({
-          'objects': {
-            'AAAAAAAAAAAAAAAAAAAAAAAA': {
-              'isa': 'PBXBuildFile',
-              'fileRef': 'BBBBBBBBBBBBBBBBBBBBBBBB',
-            },
-            'BBBBBBBBBBBBBBBBBBBBBBBB': {
-              'isa': 'PBXFileReference',
-              'name': 'main.m',
-            },
-          },
-        });
-        expect(
-          out,
-          contains('fileRef = BBBBBBBBBBBBBBBBBBBBBBBB /* main.m */;'),
-        );
-      },
-    );
-
-    // -------------------------------------------------------------------------
-    // Test 16: rootObject annotation is exactly "Project object"
-    // -------------------------------------------------------------------------
-    test('Test 16: rootObject value gets "Project object" annotation', () {
-      final out = AsciiPlistWriter().write({
-        'rootObject': 'XXXXXXXXXXXXXXXXXXXXXXXXXXXX'.substring(0, 24),
-        'objects': {
-          'XXXXXXXXXXXXXXXXXXXXXXXXXXXX'.substring(0, 24): {
-            'isa': 'PBXProject',
-          },
-        },
-      });
-      expect(
-        out,
-        contains('rootObject = XXXXXXXXXXXXXXXXXXXXXXXX /* Project object */;'),
-      );
-    });
-
-    // -------------------------------------------------------------------------
-    // Test 17: Object header annotation from name, then path; NO fallback to isa
-    // -------------------------------------------------------------------------
-    test(
-      'Test 17: object header annotation uses name, then path; no isa fallback',
-      () {
-        // With name
-        final out1 = AsciiPlistWriter().write({
-          'objects': {
-            'GGGGGGGGGGGGGGGGGGGGGGGG': {'isa': 'PBXGroup', 'name': 'Sources'},
-          },
-        });
-        expect(out1, contains('GGGGGGGGGGGGGGGGGGGGGGGG /* Sources */ = {'));
-
-        // With no name but has path
-        final out2 = AsciiPlistWriter().write({
-          'objects': {
-            'GGGGGGGGGGGGGGGGGGGGGGGG': {'isa': 'PBXGroup', 'path': 'Sources'},
-          },
-        });
-        expect(out2, contains('GGGGGGGGGGGGGGGGGGGGGGGG /* Sources */ = {'));
-
-        // With neither name nor path — NO annotation (not even ISA fallback)
-        // This matches real pbxproj files where root PBXGroup has no name/path
-        final out3 = AsciiPlistWriter().write({
-          'objects': {
-            'GGGGGGGGGGGGGGGGGGGGGGGG': {'isa': 'PBXGroup'},
-          },
-        });
-        // Object without name/path: UUID = { ... }; with no annotation
-        expect(out3, contains('GGGGGGGGGGGGGGGGGGGGGGGG = {'));
-        expect(out3, isNot(contains('GGGGGGGGGGGGGGGGGGGGGGGG /* ')));
-      },
-    );
-
-    // -------------------------------------------------------------------------
-    // Test 18: UUID elements inside arrays get annotation
-    // -------------------------------------------------------------------------
-    test('Test 18: UUID elements in children array get annotation', () {
-      final out = AsciiPlistWriter().write({
-        'objects': {
-          'GGGGGGGGGGGGGGGGGGGGGGGG': {
-            'isa': 'PBXGroup',
-            'children': ['CCCCCCCCCCCCCCCCCCCCCCCC'],
-          },
-          'CCCCCCCCCCCCCCCCCCCCCCCC': {
-            'isa': 'PBXFileReference',
-            'path': 'AppDelegate.m',
-          },
-        },
-      });
-      expect(out, contains('CCCCCCCCCCCCCCCCCCCCCCCC /* AppDelegate.m */,'));
-    });
-
-    // -------------------------------------------------------------------------
-    // Test 19: UUID-shaped string not in objects map gets NO annotation
-    // -------------------------------------------------------------------------
-    test('Test 19: UUID not in objects map gets no annotation', () {
+    test('Test 15: AnnotatedString value is written with its annotation', () {
       final out = AsciiPlistWriter().write({
         'objects': {
           'AAAAAAAAAAAAAAAAAAAAAAAA': {
             'isa': 'PBXBuildFile',
-            'fileRef': 'NONEXISTENTNONEXISTENTNON'.substring(0, 24),
+            'fileRef': const AnnotatedString(
+              'BBBBBBBBBBBBBBBBBBBBBBBB',
+              ' main.m ',
+            ),
           },
         },
       });
-      // NONEXISTENTNONEXISTENTNON (24 chars, but we use first 24)
-      // The fileRef UUID is not in objects map, so no annotation
-      final nonexistent = 'NONEXISTENTNONEXISTENTNON'.substring(0, 24);
-      expect(out, contains('fileRef = $nonexistent;'));
-      expect(out, isNot(contains('fileRef = $nonexistent /*')));
+      expect(out, contains('fileRef = BBBBBBBBBBBBBBBBBBBBBBBB /* main.m */;'));
+    });
+
+    test('Test 15b: plain UUID strings are never annotated (no sniffing)', () {
+      final out = AsciiPlistWriter().write({
+        'objects': {
+          'AAAAAAAAAAAAAAAAAAAAAAAA': {
+            'isa': 'PBXBuildFile',
+            'fileRef': 'BBBBBBBBBBBBBBBBBBBBBBBB',
+          },
+          'BBBBBBBBBBBBBBBBBBBBBBBB': {
+            'isa': 'PBXFileReference',
+            'name': 'main.m',
+          },
+        },
+      });
+      expect(out, contains('fileRef = BBBBBBBBBBBBBBBBBBBBBBBB;'));
+      // Neither the key nor the value is annotated, even though the
+      // referenced object has a name.
+      expect(out, isNot(contains('BBBBBBBBBBBBBBBBBBBBBBBB /*')));
+      expect(out, isNot(contains('AAAAAAAAAAAAAAAAAAAAAAAA /*')));
+    });
+
+    test('Test 15c: null or empty annotation writes no comment', () {
+      final out = AsciiPlistWriter().write({
+        'a': const AnnotatedString('x'),
+        'b': const AnnotatedString('y', ''),
+        'c': const AnnotatedString('z', null),
+      });
+      expect(out, contains('a = x;'));
+      expect(out, contains('b = y;'));
+      expect(out, contains('c = z;'));
+    });
+
+    test('Test 15d: annotated value is quoted when needed', () {
+      final out = AsciiPlistWriter().write({
+        'k': const AnnotatedString('has space', ' note '),
+      });
+      expect(out, contains('k = "has space" /* note */;'));
+    });
+
+    // -------------------------------------------------------------------------
+    // Test 16: rootObject carries the annotation it is given
+    // -------------------------------------------------------------------------
+    test('Test 16: rootObject annotation is the one the node carries', () {
+      const root = 'XXXXXXXXXXXXXXXXXXXXXXXX';
+      final annotated = AsciiPlistWriter().write({
+        'rootObject': const AnnotatedString(root, ' Project object '),
+        'objects': {
+          root: {'isa': 'PBXProject'},
+        },
+      });
+      expect(annotated, contains('rootObject = $root /* Project object */;'));
+
+      final plain = AsciiPlistWriter().write({
+        'rootObject': root,
+        'objects': {
+          root: {'isa': 'PBXProject'},
+        },
+      });
+      expect(plain, contains('rootObject = $root;'));
+    });
+
+    // -------------------------------------------------------------------------
+    // Test 17: object header annotation comes from AnnotatedDictionary only
+    // -------------------------------------------------------------------------
+    test('Test 17: object header annotation comes from the entry itself', () {
+      const uuid = 'GGGGGGGGGGGGGGGGGGGGGGGG';
+      final annotated = AsciiPlistWriter().write({
+        'objects': {
+          uuid: const AnnotatedDictionary({
+            'isa': 'PBXGroup',
+            'name': 'Sources',
+          }, ' Sources '),
+        },
+      });
+      expect(annotated, contains('$uuid /* Sources */ = {'));
+      // The annotation moves to the key; the dictionary itself has none.
+      expect(annotated, isNot(contains('} /*')));
+
+      // A plain map is never annotated, whatever its name or path.
+      final plain = AsciiPlistWriter().write({
+        'objects': {
+          uuid: {'isa': 'PBXGroup', 'name': 'Sources', 'path': 'Sources'},
+        },
+      });
+      expect(plain, contains('$uuid = {'));
+      expect(plain, isNot(contains('$uuid /* ')));
+    });
+
+    // -------------------------------------------------------------------------
+    // Test 18: annotated elements inside arrays
+    // -------------------------------------------------------------------------
+    test('Test 18: annotated array elements are written, plain ones not', () {
+      final out = AsciiPlistWriter().write({
+        'objects': {
+          'GGGGGGGGGGGGGGGGGGGGGGGG': {
+            'isa': 'PBXGroup',
+            'children': [
+              const AnnotatedString(
+                'CCCCCCCCCCCCCCCCCCCCCCCC',
+                ' AppDelegate.m ',
+              ),
+              'DDDDDDDDDDDDDDDDDDDDDDDD',
+            ],
+          },
+        },
+      });
+      expect(out, contains('CCCCCCCCCCCCCCCCCCCCCCCC /* AppDelegate.m */,'));
+      expect(out, contains('DDDDDDDDDDDDDDDDDDDDDDDD,'));
+    });
+
+    // -------------------------------------------------------------------------
+    // Test 19: a string that merely contains a UUID is never annotated
+    // -------------------------------------------------------------------------
+    test('Test 19: plain strings holding a UUID get no annotation', () {
+      final out = AsciiPlistWriter().write({
+        'objects': {
+          'AAAAAAAAAAAAAAAAAAAAAAAA': {
+            'isa': 'PBXContainerItemProxy',
+            'remoteGlobalIDString': 'AAAAAAAAAAAAAAAAAAAAAAAA',
+          },
+        },
+      });
+      expect(out, contains('remoteGlobalIDString = AAAAAAAAAAAAAAAAAAAAAAAA;'));
     });
   });
 }

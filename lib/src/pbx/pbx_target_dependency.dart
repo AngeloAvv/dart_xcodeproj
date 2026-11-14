@@ -94,6 +94,9 @@ class PBXTargetDependency extends AbstractObject {
   ];
 
   @override
+  List<String> get referenceAttributes => const [_kTarget, _kTargetProxy];
+
+  @override
   String get displayName => name ?? _target?.displayName ?? super.displayName;
 
   /// Annotation is always the bare ISA, e.g. `' PBXTargetDependency '`.

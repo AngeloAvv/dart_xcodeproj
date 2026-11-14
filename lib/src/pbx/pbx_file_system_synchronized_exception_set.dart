@@ -81,6 +81,9 @@ class PBXFileSystemSynchronizedBuildFileExceptionSet extends AbstractObject {
     ...super.attributeOrder,
   ];
 
+  @override
+  List<String> get referenceAttributes => const [_kTarget];
+
   // ---------------------------------------------------------------------------
   // Serialization
   // ---------------------------------------------------------------------------
@@ -219,6 +222,9 @@ class PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet
     ..._ownAttributes,
     ...super.attributeOrder,
   ];
+
+  @override
+  List<String> get referenceAttributes => const [_kBuildPhase];
 
   // ---------------------------------------------------------------------------
   // Serialization
