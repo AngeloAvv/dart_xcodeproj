@@ -15,11 +15,11 @@ class UuidGenerator {
 
   static final Random _random = Random.secure();
 
-  /// Validates the 24-char uppercase hex format used by Xcode for random object UUIDs.
-  /// Returns true only for exactly 24 uppercase hexadecimal characters.
+  /// Matches the two uppercase hex formats of Xcode object UUIDs: 24 characters
+  /// (random) or 32 characters (deterministic, as written by `predictabilizeUuids`).
   /// Rejects RFC4122 UUIDs (which contain hyphens), lowercase, wrong-length strings,
   /// and strings with non-hex characters.
-  static final RegExp _uuidPattern = RegExp(r'^[0-9A-F]{24}$');
+  static final RegExp _uuidPattern = RegExp(r'^(?:[0-9A-F]{24}|[0-9A-F]{32})$');
 
   /// Returns a random 24-char uppercase hex UUID.
   /// Equivalent to Ruby `SecureRandom.hex(12).upcase`:
@@ -48,8 +48,9 @@ class UuidGenerator {
     return digest.toString().toUpperCase();
   }
 
-  /// Returns true if [uuid] is a valid 24-char uppercase hex Xcode object UUID.
-  /// Accepts only exactly 24 uppercase hex characters [0-9A-F].
+  /// Returns true if [uuid] is a valid Xcode object UUID: either 24 uppercase hex
+  /// characters (random) or 32 uppercase hex characters (deterministic, MD5-based).
+  /// Accepts only exactly 24 or 32 uppercase hex characters [0-9A-F].
   /// Rejects: lowercase, hyphens (RFC4122 format), wrong length, non-hex chars.
   static bool isValid(String uuid) => _uuidPattern.hasMatch(uuid);
 

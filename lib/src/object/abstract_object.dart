@@ -32,7 +32,7 @@ class ToOneAttribute {
 /// 4. Each [removeReferrer] drops the referrer; when the last one goes,
 /// the object is removed from [ObjectGraph.objectsByUuid].
 abstract class AbstractObject {
-  /// Stable 24-char uppercase hex UUID assigned at construction.
+  /// Stable uppercase hex UUID (24 chars, or 32 once predictabilized) assigned at construction.
   final String uuid;
 
   /// The owning project graph. Set at construction and never reassigned.

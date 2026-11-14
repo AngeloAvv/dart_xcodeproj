@@ -62,6 +62,28 @@ void main() {
       expect(UuidGenerator.isValid('ABCDEF0123456789ABCDEF01'), isTrue);
     });
 
+    test('accepts 32 uppercase hex chars', () {
+      expect(UuidGenerator.isValid('ABCDEF0123456789ABCDEF0123456789'), isTrue);
+    });
+
+    test('accepts the output of generate and generateDeterministic', () {
+      expect(UuidGenerator.isValid(UuidGenerator.generate()), isTrue);
+      expect(
+        UuidGenerator.isValid(UuidGenerator.generateDeterministic('a/b')),
+        isTrue,
+      );
+    });
+
+    test('rejects lengths other than 24 and 32', () {
+      expect(UuidGenerator.isValid('ABCDEF0123456789ABCDEF0'), isFalse);
+      expect(UuidGenerator.isValid('ABCDEF0123456789ABCDEF012'), isFalse);
+      expect(UuidGenerator.isValid('ABCDEF0123456789ABCDEF012345678'), isFalse);
+      expect(
+        UuidGenerator.isValid('ABCDEF0123456789ABCDEF01234567890'),
+        isFalse,
+      );
+    });
+
     test('rejects lowercase', () {
       expect(UuidGenerator.isValid('abcdef0123456789abcdef01'), isFalse);
     });
@@ -73,6 +95,17 @@ void main() {
     test('rejects RFC4122 UUID with hyphens', () {
       expect(
         UuidGenerator.isValid('550e8400-e29b-41d4-a716-446655440000'),
+        isFalse,
+      );
+    });
+
+    test('rejects 32 chars that are not all uppercase hex', () {
+      expect(
+        UuidGenerator.isValid('abcdef0123456789abcdef0123456789'),
+        isFalse,
+      );
+      expect(
+        UuidGenerator.isValid('GGGGEF0123456789ABCDEF0123456789'),
         isFalse,
       );
     });
