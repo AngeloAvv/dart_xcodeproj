@@ -139,9 +139,12 @@ class PBXFileSystemSynchronizedBuildFileExceptionSet extends AbstractObject {
   // ---------------------------------------------------------------------------
 
   @override
-  void removeReference(AbstractObject obj) {
-    if (identical(_target, obj)) target = null;
-  }
+  List<ToOneAttribute> get toOneAttributes => [
+    ToOneAttribute(
+      get: () => target,
+      set: (v) => target = v as AbstractTarget?,
+    ),
+  ];
 
   @override
   void clearRelationships() {
@@ -259,9 +262,12 @@ class PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet
   // ---------------------------------------------------------------------------
 
   @override
-  void removeReference(AbstractObject obj) {
-    if (identical(_buildPhase, obj)) buildPhase = null;
-  }
+  List<ToOneAttribute> get toOneAttributes => [
+    ToOneAttribute(
+      get: () => buildPhase,
+      set: (v) => buildPhase = v as AbstractBuildPhase?,
+    ),
+  ];
 
   @override
   void clearRelationships() {

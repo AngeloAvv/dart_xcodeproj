@@ -203,11 +203,20 @@ abstract class AbstractTarget extends AbstractObject {
   // ---------------------------------------------------------------------------
 
   @override
-  void removeReference(AbstractObject obj) {
-    if (identical(_buildConfigurationList, obj)) buildConfigurationList = null;
-    if (obj is AbstractBuildPhase) buildPhases.remove(obj);
-    if (obj is PBXTargetDependency) dependencies.remove(obj);
-  }
+  List<ToOneAttribute> get toOneAttributes => [
+    ...super.toOneAttributes,
+    ToOneAttribute(
+      get: () => buildConfigurationList,
+      set: (v) => buildConfigurationList = v as XCConfigurationList?,
+    ),
+  ];
+
+  @override
+  List<ObjectList<Object>> get toManyAttributes => [
+    ...super.toManyAttributes,
+    buildPhases,
+    dependencies,
+  ];
 
   @override
   void clearRelationships() {
@@ -517,13 +526,21 @@ class PBXNativeTarget extends AbstractTarget {
   // ---------------------------------------------------------------------------
 
   @override
-  void removeReference(AbstractObject obj) {
-    if (identical(_productReference, obj)) productReference = null;
-    packageProductDependencies.remove(obj);
-    fileSystemSynchronizedGroups.remove(obj);
-    buildRules.remove(obj);
-    super.removeReference(obj);
-  }
+  List<ToOneAttribute> get toOneAttributes => [
+    ...super.toOneAttributes,
+    ToOneAttribute(
+      get: () => productReference,
+      set: (v) => productReference = v,
+    ),
+  ];
+
+  @override
+  List<ObjectList<Object>> get toManyAttributes => [
+    ...super.toManyAttributes,
+    packageProductDependencies,
+    fileSystemSynchronizedGroups,
+    buildRules,
+  ];
 
   @override
   void clearRelationships() {

@@ -171,6 +171,12 @@ abstract class AbstractBuildPhase extends AbstractObject {
   // ---------------------------------------------------------------------------
 
   @override
+  List<ObjectList<Object>> get toManyAttributes => [
+    ...super.toManyAttributes,
+    files,
+  ];
+
+  @override
   void clearRelationships() {
     files.clear();
   }

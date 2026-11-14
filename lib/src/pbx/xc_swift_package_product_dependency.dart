@@ -100,9 +100,9 @@ class XCSwiftPackageProductDependency extends AbstractObject {
   // ---------------------------------------------------------------------------
 
   @override
-  void removeReference(AbstractObject obj) {
-    if (identical(_package, obj)) package = null;
-  }
+  List<ToOneAttribute> get toOneAttributes => [
+    ToOneAttribute(get: () => package, set: (v) => package = v),
+  ];
 
   @override
   void clearRelationships() {

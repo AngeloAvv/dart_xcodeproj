@@ -135,9 +135,12 @@ class PBXReferenceProxy extends AbstractObject {
   // ---------------------------------------------------------------------------
 
   @override
-  void removeReference(AbstractObject obj) {
-    if (identical(_remoteRef, obj)) remoteRef = null;
-  }
+  List<ToOneAttribute> get toOneAttributes => [
+    ToOneAttribute(
+      get: () => remoteRef,
+      set: (v) => remoteRef = v as PBXContainerItemProxy?,
+    ),
+  ];
 
   @override
   void clearRelationships() {

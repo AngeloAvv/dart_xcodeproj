@@ -335,16 +335,16 @@ class XCBuildConfiguration extends AbstractObject {
   // ---------------------------------------------------------------------------
 
   @override
-  void removeReference(AbstractObject obj) {
-    if (identical(_baseConfigurationReference, obj)) {
-      _baseConfigurationReference!.removeReferrer(this);
-      _baseConfigurationReference = null;
-    }
-    if (identical(_baseConfigurationReferenceAnchor, obj)) {
-      _baseConfigurationReferenceAnchor!.removeReferrer(this);
-      _baseConfigurationReferenceAnchor = null;
-    }
-  }
+  List<ToOneAttribute> get toOneAttributes => [
+    ToOneAttribute(
+      get: () => baseConfigurationReference,
+      set: (v) => baseConfigurationReference = v as PBXFileReference?,
+    ),
+    ToOneAttribute(
+      get: () => baseConfigurationReferenceAnchor,
+      set: (v) => baseConfigurationReferenceAnchor = v,
+    ),
+  ];
 
   @override
   void clearRelationships() {

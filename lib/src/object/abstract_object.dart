@@ -1,7 +1,24 @@
 import 'dart:developer' as developer;
 
 import 'isa_registry.dart';
+import 'object_dictionary.dart';
 import 'object_graph.dart';
+import 'object_list.dart';
+
+/// Accessor pair for a single-valued (to-one) object reference attribute.
+/// Dart has no attribute descriptors, so every class that owns to-one
+/// references exposes them through [AbstractObject.toOneAttributes]. The
+/// [set] callback MUST go through the public ref-counted setter so that the
+/// referrer bookkeeping of the previous value is updated.
+class ToOneAttribute {
+  /// Returns the currently referenced object, or null when unset.
+  final AbstractObject? Function() get;
+
+  /// Assigns [value] through the ref-counted setter.
+  final void Function(AbstractObject? value) set;
+
+  const ToOneAttribute({required this.get, required this.set});
+}
 
 /// Base class for every Xcode project object (PBXFileReference, PBXNativeTarget, etc.).
 /// Port of [AbstractObject]. Each concrete subclass
@@ -86,10 +103,47 @@ abstract class AbstractObject {
     );
   }
 
+  /// To-one object reference attributes of this class.
+  /// Subclasses override and append their own attributes to `super`'s.
+  /// Port of the `to_one_attributes` descriptors in.
+  List<ToOneAttribute> get toOneAttributes => const [];
+
+  /// To-many object reference attributes of this class ([ObjectList]s holding
+  /// [AbstractObject]s). Subclasses override and append to `super`'s.
+  /// Port of the `to_many_attributes` descriptors in.
+  List<ObjectList<Object>> get toManyAttributes => const [];
+
+  /// Attributes holding lists of [ObjectDictionary] (references by keys).
+  /// Subclasses override and append to `super`'s.
+  /// Port of the `references_by_keys_attributes` descriptors in.
+  List<ObjectList<ObjectDictionary>> get referencesByKeysAttributes => const [];
+
   /// Called by [removeFromProject] on each referrer.
-  /// Subclasses override to null out any typed field pointing to [obj].
+  /// Drops every reference to [obj] held by this object: to-one attributes
+  /// pointing to [obj] are set to null, [obj] is removed from every to-many
+  /// attribute and from every dictionary of the references-by-keys attributes.
+  /// Subclasses do not need to override it: they declare their attributes via
+  /// [toOneAttributes], [toManyAttributes] and [referencesByKeysAttributes].
   /// Port of (`remove_reference`).
-  void removeReference(AbstractObject obj) {}
+  void removeReference(AbstractObject obj) {
+    for (final attribute in toOneAttributes) {
+      if (identical(attribute.get(), obj)) attribute.set(null);
+    }
+    for (final list in toManyAttributes) {
+      list.remove(obj);
+    }
+    for (final dictionaries in referencesByKeysAttributes) {
+      var held = false;
+      for (final dictionary in dictionaries) {
+        if (dictionary.values.any((v) => identical(v, obj))) held = true;
+        dictionary.removeReference(obj);
+      }
+      // ObjectDictionary.removeReference does not touch referrer counts, so
+      // drop this object from [obj]'s referrers here (Ruby does it by
+      // assigning nil through the dictionary setter).
+      if (held) obj.removeReferrer(this);
+    }
+  }
 
   /// Called by [removeFromProject] on `this`.
   /// Subclasses override to clear all own to_one / to_many references

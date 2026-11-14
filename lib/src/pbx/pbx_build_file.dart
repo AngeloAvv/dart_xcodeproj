@@ -204,19 +204,11 @@ class PBXBuildFile extends AbstractObject {
   // Relationship lifecycle
   // ---------------------------------------------------------------------------
 
-  /// Called by [removeFromProject] on each referrer that holds a field pointing
-  /// to [obj]. Removes ref-count before nulling [_fileRef] or [_productRef].
   @override
-  void removeReference(AbstractObject obj) {
-    if (identical(_fileRef, obj)) {
-      _fileRef!.removeReferrer(this);
-      _fileRef = null;
-    }
-    if (identical(_productRef, obj)) {
-      _productRef!.removeReferrer(this);
-      _productRef = null;
-    }
-  }
+  List<ToOneAttribute> get toOneAttributes => [
+    ToOneAttribute(get: () => fileRef, set: (v) => fileRef = v),
+    ToOneAttribute(get: () => productRef, set: (v) => productRef = v),
+  ];
 
   /// Called by [removeFromProject] on this object to clear all outgoing
   /// references. Calls [removeReferrer] to properly decrement ref counts.
