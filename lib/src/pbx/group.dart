@@ -3,6 +3,7 @@ import 'package:path/path.dart' as p;
 import '../object/abstract_object.dart';
 import '../object/object_list.dart';
 import '../project/groups_position.dart';
+import 'pbx_build_file.dart';
 import 'pbx_file_reference.dart';
 
 // =============================================================================
@@ -220,6 +221,42 @@ class PBXGroup extends AbstractObject {
   @override
   void clearRelationships() {
     children.clear();
+  }
+
+  /// The build files associated with this group (e.g. the Resources phase
+  /// entry of a variant group such as `LaunchScreen.storyboard`).
+  /// Port of `build_files` (`referrers.grep(PBXBuildFile)`).
+  List<PBXBuildFile> get buildFiles =>
+      referrers.whereType<PBXBuildFile>().toList();
+
+  /// Removes the children (files and groups, recursively) under this group,
+  /// together with their build files.
+  /// Port of `clear`.
+  void clear() {
+    // Iterate over a snapshot: removing a child mutates [children].
+    for (final child in children.toList()) {
+      child.removeFromProject();
+    }
+  }
+
+  /// Alias of [clear].
+  /// Port of `remove_children_recursively`.
+  void removeChildrenRecursively() => clear();
+
+  /// Removes this group from the project together with all of its descendants
+  /// and every [PBXBuildFile] that points to it or to them, so build phases
+  /// never keep dangling entries. [PBXVariantGroup] and [XCVersionGroup]
+  /// inherit this behaviour.
+  /// Port of `remove_from_project`
+  /// (`build_files.each(&:remove_from_project); super`), extended to [clear]
+  /// the group first so the build files of descendants are removed as well.
+  @override
+  void removeFromProject() {
+    clear();
+    for (final buildFile in buildFiles) {
+      buildFile.removeFromProject();
+    }
+    super.removeFromProject();
   }
 
   // ---------------------------------------------------------------------------
