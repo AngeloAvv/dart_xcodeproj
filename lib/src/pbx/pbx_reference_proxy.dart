@@ -1,4 +1,5 @@
 import '../object/abstract_object.dart';
+import 'pbx_build_file.dart';
 import 'pbx_container_item_proxy.dart';
 
 /// Represents a proxy for a file reference in a sub-project.
@@ -10,6 +11,8 @@ import 'pbx_container_item_proxy.dart';
 /// - [remoteRef] is ref-counted (has_one pattern → [PBXContainerItemProxy]).
 /// - [clearRelationships] nulls [remoteRef].
 /// - [removeReference] clears [remoteRef] if it matches [obj].
+/// - [removeFromProject] also removes the proxy's [buildFiles], and with them
+///   the [remoteRef] once nothing else refers to it.
 class PBXReferenceProxy extends AbstractObject {
   /// ISA string for factory registry and plist output.
   static const String isaStatic = 'PBXReferenceProxy';
@@ -141,6 +144,25 @@ class PBXReferenceProxy extends AbstractObject {
       set: (v) => remoteRef = v as PBXContainerItemProxy?,
     ),
   ];
+
+  /// The build files associated with this reference proxy.
+  /// Port of `build_files` (`referrers.grep(PBXBuildFile)`).
+  List<PBXBuildFile> get buildFiles =>
+      referrers.whereType<PBXBuildFile>().toList();
+
+  /// In addition to removing the reference proxy, removes every item related
+  /// to it: its [buildFiles] (which also drops them from their build phases)
+  /// and, through the usual reference counting, its [remoteRef] when this
+  /// proxy was its last referrer.
+  /// Port of `remove_from_project`.
+  @override
+  void removeFromProject() {
+    // Iterate over a snapshot: removing a build file mutates the referrers.
+    for (final buildFile in buildFiles) {
+      buildFile.removeFromProject();
+    }
+    super.removeFromProject();
+  }
 
   @override
   void clearRelationships() {
