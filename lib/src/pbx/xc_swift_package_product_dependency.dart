@@ -54,6 +54,11 @@ class XCSwiftPackageProductDependency extends AbstractObject {
   @override
   String get isa => isaStatic;
 
+  /// The product name, falling back to the ISA-derived default.
+  /// Port of `XCSwiftPackageProductDependency#display_name`.
+  @override
+  String get displayName => productName ?? super.displayName;
+
   @override
   List<String> get attributeOrder => [
     ..._ownAttributes,

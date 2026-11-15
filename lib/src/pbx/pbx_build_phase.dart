@@ -82,12 +82,23 @@ abstract class AbstractBuildPhase extends AbstractObject {
     ...super.attributeOrder,
   ];
 
-  /// Strips the `BuildPhase` suffix from the ISA string.
-  /// Port of:
-  /// `isa.gsub('BuildPhase', '')`
+  /// The phase's own `name` attribute, when its subclass declares one.
+  /// Overridden by [PBXCopyFilesBuildPhase] and [PBXShellScriptBuildPhase].
+  String? get _declaredName => null;
+
+  /// The declared `name` when non-empty, else the ISA-derived default, with
+  /// the `BuildPhase` suffix stripped (so an unnamed shell script phase is
+  /// `ShellScript`).
+  /// Port of `AbstractBuildPhase#display_name`:
+  /// `super.gsub(/BuildPhase$/, '')`
   @override
-  String get displayName =>
-      super.displayName.replaceAll(RegExp(r'BuildPhase$'), '');
+  String get displayName {
+    final declared = _declaredName;
+    final base = declared != null && declared.isNotEmpty
+        ? declared
+        : super.displayName;
+    return base.replaceAll(RegExp(r'BuildPhase$'), '');
+  }
 
   /// Returns `' $displayName '` (spaces on both sides) using the stripped name.
   /// Port of.
@@ -345,6 +356,9 @@ class PBXCopyFilesBuildPhase extends AbstractBuildPhase {
   /// Optional display name for this copy phase.
   String? name;
 
+  @override
+  String? get _declaredName => name;
+
   /// Destination path within the product bundle. Default is empty string.
   String dstPath = '';
 
@@ -486,6 +500,9 @@ class PBXShellScriptBuildPhase extends AbstractBuildPhase {
 
   /// Optional display name for this script phase.
   String? name;
+
+  @override
+  String? get _declaredName => name;
 
   /// Input file paths for the script (plain strings — NOT ObjectList).
   /// Port of `attribute :input_paths, Array`.
