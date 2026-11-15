@@ -220,6 +220,17 @@ void main() {
       expect(config.resolveBuildSetting('FLAGS'), equals('-lz -ObjC'));
     });
 
+    test(r'expands $(inherited) in a single pass', () {
+      final config = graph.newObject((g, u) => XCBuildConfiguration(g, u));
+      // A keyword carried by the inherited value must not be expanded again.
+      config.setLoadedXcConfig({'MY_PATH': r'${inherited}/project'});
+      config.buildSettings = {'MY_PATH': r'$(inherited)/target'};
+      expect(
+        config.resolveBuildSetting('MY_PATH'),
+        equals(r'${inherited}/project/target'),
+      );
+    });
+
     test('mutual recursion guard — A=\$(A) does not stack overflow', () {
       final config = graph.newObject((g, u) => XCBuildConfiguration(g, u));
       config.buildSettings = {'A': r'$(A)'};

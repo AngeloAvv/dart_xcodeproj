@@ -402,6 +402,10 @@ class XCBuildConfiguration extends AbstractObject {
     return value;
   }
 
+  static final RegExp _inheritedPattern = RegExp(
+    MiscConstants.inheritedKeywords.map(RegExp.escape).join('|'),
+  );
+
   /// Expand [buildSettingValue] by replacing `$(inherited)`/`${inherited}` with [configValue].
   /// Port of: expand_build_setting.
   /// Handles cross-type:
@@ -420,14 +424,16 @@ class XCBuildConfiguration extends AbstractObject {
         configValue ?? (buildSettingValue is String ? '' : <String>[]);
 
     if (buildSettingValue is String) {
-      var result = buildSettingValue;
-      for (final keyword in MiscConstants.inheritedKeywords) {
-        final replacement = inherited is List
-            ? inherited.join(' ')
-            : inherited.toString();
-        result = result.replaceAll(keyword, replacement);
-      }
-      return result;
+      final replacement = inherited is List
+          ? inherited.join(' ')
+          : inherited.toString();
+      // Single pass over the original string (like Ruby's
+      // `gsub(Regexp.union(..))`) so keywords inside [replacement] are not
+      // expanded a second time.
+      return buildSettingValue.replaceAllMapped(
+        _inheritedPattern,
+        (_) => replacement,
+      );
     }
 
     if (buildSettingValue is List) {
