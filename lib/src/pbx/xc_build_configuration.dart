@@ -388,6 +388,9 @@ class XCBuildConfiguration extends AbstractObject {
       for (final match in matches) {
         final varName = _extractVarName(match);
         if (varName == null) continue;
+        // `$(inherited)` is expanded later by [_expandBuildSetting]; keep it
+        // untouched here (matches Ruby's resolve_variable_substitution).
+        if (varName == 'inherited') continue;
         // Mutual recursion guard: if we're already resolving this variable, return sentinel.
         if (activeKeys.contains(varName)) return _kMutualRecursionSentinel;
         final resolved = resolveBuildSetting(varName, Set.of(activeKeys));
@@ -398,6 +401,10 @@ class XCBuildConfiguration extends AbstractObject {
     }
     return value;
   }
+
+  static final RegExp _inheritedPattern = RegExp(
+    MiscConstants.inheritedKeywords.map(RegExp.escape).join('|'),
+  );
 
   /// Expand [buildSettingValue] by replacing `$(inherited)`/`${inherited}` with [configValue].
   /// Port of: expand_build_setting.
@@ -417,14 +424,16 @@ class XCBuildConfiguration extends AbstractObject {
         configValue ?? (buildSettingValue is String ? '' : <String>[]);
 
     if (buildSettingValue is String) {
-      var result = buildSettingValue;
-      for (final keyword in MiscConstants.inheritedKeywords) {
-        final replacement = inherited is List
-            ? inherited.join(' ')
-            : inherited.toString();
-        result = result.replaceAll(keyword, replacement);
-      }
-      return result;
+      final replacement = inherited is List
+          ? inherited.join(' ')
+          : inherited.toString();
+      // Single pass over the original string (like Ruby's
+      // `gsub(Regexp.union(..))`) so keywords inside [replacement] are not
+      // expanded a second time.
+      return buildSettingValue.replaceAllMapped(
+        _inheritedPattern,
+        (_) => replacement,
+      );
     }
 
     if (buildSettingValue is List) {

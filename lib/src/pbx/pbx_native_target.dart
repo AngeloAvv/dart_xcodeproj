@@ -221,15 +221,18 @@ abstract class AbstractTarget extends AbstractObject {
   // ---------------------------------------------------------------------------
 
   /// Returns a Map of configName → resolved value for [key].
+  /// Values are a [String] for scalar settings, a `List<dynamic>` for array
+  /// settings, or `null` when the key is not set.
   /// Resolution order: target config → project config. '$(inherited)' in the target
-  /// value is replaced with the project-level value. When target value is null,
-  /// the project-level value is used directly.
-  Map<String, String?> resolvedBuildSetting(
+  /// value is replaced with the project-level value (spliced in for arrays).
+  /// When target value is null, the project-level value is used directly.
+  Map<String, dynamic> resolvedBuildSetting(
     String key, {
     bool resolveAgainstXcconfig = false,
   }) {
     final targetSettings =
-        buildConfigurationList?.getSetting(key, resolveAgainstXcconfig) ?? {};
+        buildConfigurationList?.getSetting(key, resolveAgainstXcconfig) ??
+        <String, dynamic>{};
 
     // Find PBXProject via ISA scan — avoids circular import of pbx_project.dart.
     // Established pattern (see addDependency in PBXNativeTarget).
@@ -245,12 +248,14 @@ abstract class AbstractTarget extends AbstractObject {
               key,
               resolveAgainstXcconfig,
             )
-            as Map<String, String?>? ??
-        <String, String?>{};
+            as Map<String, dynamic>? ??
+        <String, dynamic>{};
 
     return targetSettings.map((configName, targetVal) {
       final projVal = projectSettings[configName];
-      if (targetVal != null && _includesInherited(targetVal)) {
+      if (targetVal != null &&
+          projVal != null &&
+          _includesInherited(targetVal)) {
         return MapEntry(configName, _expandInherited(targetVal, projVal));
       }
       return MapEntry(configName, targetVal ?? projVal);
@@ -258,33 +263,74 @@ abstract class AbstractTarget extends AbstractObject {
   }
 
   /// Returns the single resolved value for [key] if all configurations agree.
+  /// The value is a [String] or a `List<dynamic>` depending on the setting.
   /// Throws [StateError] if configurations produce different non-null values.
-  String? commonResolvedBuildSetting(
+  dynamic commonResolvedBuildSetting(
     String key, {
     bool resolveAgainstXcconfig = false,
   }) {
-    final values = resolvedBuildSetting(
+    final values = <dynamic>[];
+    for (final value in resolvedBuildSetting(
       key,
       resolveAgainstXcconfig: resolveAgainstXcconfig,
-    ).values.whereType<String>().toSet();
+    ).values) {
+      if (value != null && !values.any((v) => _deepEquals(v, value))) {
+        values.add(value);
+      }
+    }
     if (values.length <= 1) return values.isEmpty ? null : values.first;
     throw StateError('Build setting $key has multiple values: $values');
   }
 
-  bool _includesInherited(String value) {
-    for (final kw in MiscConstants.inheritedKeywords) {
-      if (value.contains(kw)) return true;
+  /// Whether [value] (a [String] or a `List<dynamic>`) contains an
+  /// `$(inherited)` keyword: as a substring for strings, as an element for lists.
+  bool _includesInherited(dynamic value) {
+    if (value is List) {
+      return value.any(MiscConstants.inheritedKeywords.contains);
+    }
+    if (value is String) {
+      for (final kw in MiscConstants.inheritedKeywords) {
+        if (value.contains(kw)) return true;
+      }
     }
     return false;
   }
 
-  String? _expandInherited(String value, String? inherited) {
-    if (inherited == null) return value;
-    var result = value;
-    for (final kw in MiscConstants.inheritedKeywords) {
-      result = result.replaceAll(kw, inherited);
+  /// Replaces `$(inherited)` in [value] with [inherited]. Strings are
+  /// substituted textually; for lists each inherited element is replaced by
+  /// [inherited] (spliced in when it is itself a list).
+  dynamic _expandInherited(dynamic value, dynamic inherited) {
+    if (value is List) {
+      return [
+        for (final item in value)
+          if (MiscConstants.inheritedKeywords.contains(item))
+            ...(inherited is List ? inherited : [inherited])
+          else
+            item,
+      ];
     }
-    return result;
+    final replacement = inherited is List ? inherited.join(' ') : '$inherited';
+    // Single pass over the original string (like Ruby's `gsub(Regexp.union(..))`)
+    // so keywords inside [replacement] are not expanded a second time.
+    return (value as String).replaceAllMapped(
+      _inheritedPattern,
+      (_) => replacement,
+    );
+  }
+
+  static final RegExp _inheritedPattern = RegExp(
+    MiscConstants.inheritedKeywords.map(RegExp.escape).join('|'),
+  );
+
+  bool _deepEquals(dynamic a, dynamic b) {
+    if (a is List && b is List) {
+      if (a.length != b.length) return false;
+      for (var i = 0; i < a.length; i++) {
+        if (!_deepEquals(a[i], b[i])) return false;
+      }
+      return true;
+    }
+    return a == b;
   }
 }
 

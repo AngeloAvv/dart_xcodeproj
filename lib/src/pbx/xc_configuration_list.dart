@@ -98,20 +98,24 @@ class XCConfigurationList extends AbstractObject {
   // ---------------------------------------------------------------------------
 
   /// Returns a Map of configName → raw (or resolved) buildSettings value for [key].
+  /// Each value is returned unchanged: a [String] for scalar settings, a
+  /// `List<dynamic>` for array settings (e.g. `LD_RUNPATH_SEARCH_PATHS`,
+  /// `OTHER_LDFLAGS`), or `null` when the key is not set.
   /// When [resolveAgainstXcconfig] is false, looks up [key] in each config's
   /// [XCBuildConfiguration.buildSettings] directly. When true, calls
   /// [XCBuildConfiguration.resolveBuildSetting] (xcconfig support).
   /// [rootTarget] is forwarded to [resolveBuildSetting] when resolving.
-  Map<String, String?> getSetting(
+  /// Port of `#get_setting`.
+  Map<String, dynamic> getSetting(
     String key,
     bool resolveAgainstXcconfig, [
     dynamic rootTarget,
   ]) {
-    final result = <String, String?>{};
+    final result = <String, dynamic>{};
     for (final bc in buildConfigurations) {
       result[bc.name ?? ''] = resolveAgainstXcconfig
-          ? bc.resolveBuildSetting(key) as String?
-          : bc.buildSettings[key] as String?;
+          ? bc.resolveBuildSetting(key)
+          : bc.buildSettings[key];
     }
     return result;
   }

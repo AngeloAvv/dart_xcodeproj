@@ -223,7 +223,7 @@ void main() {
         list.buildConfigurations.add(release);
 
         final result = list.getSetting('PRODUCT_NAME', false);
-        expect(result, isA<Map<String, String?>>());
+        expect(result, isA<Map<String, dynamic>>());
         expect(result.length, equals(2));
         expect(result['Debug'], equals('MyApp'));
         expect(result['Release'], equals('MyApp'));
@@ -242,6 +242,37 @@ void main() {
         expect(result['Debug'], isNull);
       },
     );
+
+    test('getSetting returns array values unchanged', () {
+      final list = graph.newObject((g, u) => XCConfigurationList(g, u));
+      final debug = graph.newObject((g, u) => XCBuildConfiguration(g, u));
+      debug.name = 'Debug';
+      debug.buildSettings['LD_RUNPATH_SEARCH_PATHS'] = [
+        r'$(inherited)',
+        '@executable_path/Frameworks',
+      ];
+      debug.buildSettings['PRODUCT_NAME'] = 'MyApp';
+      list.buildConfigurations.add(debug);
+
+      final paths = list.getSetting('LD_RUNPATH_SEARCH_PATHS', false);
+      expect(paths['Debug'], isA<List<dynamic>>());
+      expect(
+        paths['Debug'],
+        equals([r'$(inherited)', '@executable_path/Frameworks']),
+      );
+      expect(list.getSetting('PRODUCT_NAME', false)['Debug'], isA<String>());
+    });
+
+    test('getSetting resolves array values against xcconfig', () {
+      final list = graph.newObject((g, u) => XCConfigurationList(g, u));
+      final debug = graph.newObject((g, u) => XCBuildConfiguration(g, u));
+      debug.name = 'Debug';
+      debug.buildSettings['OTHER_LDFLAGS'] = ['-ObjC', '-lz'];
+      list.buildConfigurations.add(debug);
+
+      final flags = list.getSetting('OTHER_LDFLAGS', true);
+      expect(flags['Debug'], equals(['-ObjC', '-lz']));
+    });
   });
 
   // ---------------------------------------------------------------------------

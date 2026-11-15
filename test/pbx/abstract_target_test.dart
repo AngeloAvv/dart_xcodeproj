@@ -209,7 +209,7 @@ void main() {
   // ---------------------------------------------------------------------------
   group('AbstractTarget.resolvedBuildSetting ( Plan 03)', () {
     test(
-      'resolvedBuildSetting returns Map<String, String?> keyed by config name',
+      'resolvedBuildSetting returns Map<String, dynamic> keyed by config name',
       () async {
         registerPhase3Types();
         registerPhase4Types();
@@ -233,7 +233,7 @@ void main() {
         configList.buildConfigurations.add(release);
 
         final result = target.resolvedBuildSetting('PRODUCT_NAME');
-        expect(result, isA<Map<String, String?>>());
+        expect(result, isA<Map<String, dynamic>>());
         expect(result.containsKey('Debug'), isTrue);
         expect(result.containsKey('Release'), isTrue);
       },
@@ -298,6 +298,110 @@ void main() {
 
         final result = target.resolvedBuildSetting('SWIFT_FLAGS');
         expect(result['Debug'], equals('-enable-experimental -Xfrontend'));
+      },
+    );
+
+    test(
+      'resolvedBuildSetting does not re-expand \$(inherited) inserted from the project value',
+      () async {
+        registerPhase3Types();
+        registerPhase4Types();
+        final project = await XcodeProject.create('/tmp/TestProject.xcodeproj');
+        final target = project.newObject((g, u) => PBXNativeTarget(g, u));
+        target.name = 'MyApp';
+        project.rootObject.targets.add(target);
+
+        final targetConfigList = project.newObject(
+          (g, u) => XCConfigurationList(g, u),
+        );
+        target.buildConfigurationList = targetConfigList;
+        final targetDebug = project.newObject(
+          (g, u) => XCBuildConfiguration(g, u),
+        );
+        targetDebug.name = 'Debug';
+        targetDebug.buildSettings['MY_PATH'] = r'$(inherited)/target';
+        targetConfigList.buildConfigurations.add(targetDebug);
+
+        final projDebug = project.buildConfigurationList['Debug'];
+        projDebug?.buildSettings['MY_PATH'] = r'${inherited}/project';
+
+        final result = target.resolvedBuildSetting('MY_PATH');
+        // Matches Ruby: the keyword carried by the project value stays as is.
+        expect(result['Debug'], equals(r'${inherited}/project/target'));
+      },
+    );
+
+    test(
+      'resolvedBuildSetting splices project-level array into \$(inherited)',
+      () async {
+        registerPhase3Types();
+        registerPhase4Types();
+        final project = await XcodeProject.create('/tmp/TestProject.xcodeproj');
+        final target = project.newObject((g, u) => PBXNativeTarget(g, u));
+        target.name = 'MyApp';
+        project.rootObject.targets.add(target);
+
+        final targetConfigList = project.newObject(
+          (g, u) => XCConfigurationList(g, u),
+        );
+        target.buildConfigurationList = targetConfigList;
+        final targetDebug = project.newObject(
+          (g, u) => XCBuildConfiguration(g, u),
+        );
+        targetDebug.name = 'Debug';
+        targetDebug.buildSettings['LD_RUNPATH_SEARCH_PATHS'] = [
+          r'$(inherited)',
+          '@executable_path/Frameworks',
+        ];
+        targetConfigList.buildConfigurations.add(targetDebug);
+
+        final projDebug = project.buildConfigurationList['Debug'];
+        projDebug?.buildSettings['LD_RUNPATH_SEARCH_PATHS'] = [
+          '/usr/lib/swift',
+        ];
+
+        final result = target.resolvedBuildSetting('LD_RUNPATH_SEARCH_PATHS');
+        expect(
+          result['Debug'],
+          equals(['/usr/lib/swift', '@executable_path/Frameworks']),
+        );
+        expect(
+          target.commonResolvedBuildSetting('LD_RUNPATH_SEARCH_PATHS'),
+          equals(['/usr/lib/swift', '@executable_path/Frameworks']),
+        );
+      },
+    );
+
+    test(
+      'resolvedBuildSetting keeps \$(inherited) when resolving against xcconfig',
+      () async {
+        registerPhase3Types();
+        registerPhase4Types();
+        final project = await XcodeProject.create('/tmp/TestProject.xcodeproj');
+        final target = project.newObject((g, u) => PBXNativeTarget(g, u));
+        target.name = 'MyApp';
+        project.rootObject.targets.add(target);
+
+        final targetConfigList = project.newObject(
+          (g, u) => XCConfigurationList(g, u),
+        );
+        target.buildConfigurationList = targetConfigList;
+        final targetDebug = project.newObject(
+          (g, u) => XCBuildConfiguration(g, u),
+        );
+        targetDebug.name = 'Debug';
+        targetDebug.buildSettings['OTHER_LDFLAGS'] = [r'$(inherited)', '-ObjC'];
+        targetConfigList.buildConfigurations.add(targetDebug);
+
+        final projDebug = project.buildConfigurationList['Debug'];
+        projDebug?.buildSettings['OTHER_LDFLAGS'] = ['-lz'];
+
+        final result = target.resolvedBuildSetting(
+          'OTHER_LDFLAGS',
+          resolveAgainstXcconfig: true,
+        );
+        // Matches Ruby: the project value is spliced in at `$(inherited)`.
+        expect(result['Debug'], equals(['-lz', '-ObjC']));
       },
     );
 
