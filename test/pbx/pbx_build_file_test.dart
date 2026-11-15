@@ -5,6 +5,7 @@ import 'package:dart_xcodeproj/src/object/isa_registry.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_build_file.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_build_phase.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_file_reference.dart';
+import 'package:dart_xcodeproj/src/pbx/pbx_reference_proxy.dart';
 import 'package:test/test.dart';
 
 import '../object/helpers/mock_object_graph.dart';
@@ -437,6 +438,21 @@ void main() {
       expect(
         annotationFor(path: 'sub/App.app', sourceTree: 'BUILT_PRODUCTS_DIR'),
         equals(' sub/App.app in Sources '),
+      );
+    });
+
+    test('keeps the full path of an unnamed reference proxy', () {
+      // Ruby: PBXReferenceProxy#display_name is the full path.
+      final phase = graph.newObject((g, u) => PBXFrameworksBuildPhase(g, u));
+      final buildFile = graph.newObject((g, u) => PBXBuildFile(g, u));
+      final proxy = graph.newObject((g, u) => PBXReferenceProxy(g, u));
+      proxy.path = '../Products/Foo.framework';
+      proxy.sourceTree = '<group>';
+      buildFile.fileRef = proxy;
+      phase.files.add(buildFile);
+      expect(
+        buildFile.asciiPlistAnnotation,
+        equals(' ../Products/Foo.framework in Frameworks '),
       );
     });
   });
