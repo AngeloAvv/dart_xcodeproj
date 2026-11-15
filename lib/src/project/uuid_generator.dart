@@ -24,8 +24,11 @@ class UuidGenerator {
   /// Returns a random 24-char uppercase hex UUID.
   /// Equivalent to Ruby `SecureRandom.hex(12).upcase`:
   /// generates 12 cryptographically random bytes and encodes them as 24 hex chars.
-  static String generate() {
-    final bytes = List<int>.generate(12, (_) => _random.nextInt(256));
+  /// An optional [random] source can be supplied to make the output
+  /// deterministic (intended for tests); it defaults to a secure generator.
+  static String generate({Random? random}) {
+    final rng = random ?? _random;
+    final bytes = List<int>.generate(12, (_) => rng.nextInt(256));
     return bytes
         .map((b) => b.toRadixString(16).padLeft(2, '0'))
         .join()

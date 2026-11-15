@@ -6,6 +6,7 @@
 
 import 'dart:developer' as developer;
 import 'dart:io';
+import 'dart:math' show Random;
 
 import 'package:path/path.dart' as p;
 
@@ -288,6 +289,15 @@ class XcodeProject implements ObjectGraph {
   // UUID generation
   // ---------------------------------------------------------------------------
 
+  /// Random source used for UUID generation. When `null` (the default) a
+  /// cryptographically secure generator is used. Intended to be overridden in
+  /// tests to make UUID generation deterministic.
+  Random? uuidRandom;
+
+  /// Number of candidate UUIDs produced per batch (Ruby generates `count + 1`
+  /// candidates with `count = 100`).
+  static const int _uuidBatchSize = 101;
+
   /// Generates a unique 24-char uppercase hex UUID for this project.
   /// Internally maintains a batch to avoid UUID collisions within a session.
   String generateUuid() {
@@ -297,13 +307,18 @@ class XcodeProject implements ObjectGraph {
     return _availableUuids.removeAt(0);
   }
 
+  /// Pre-generates a batch of candidate UUIDs and keeps only those that are
+  /// neither already generated nor already present in [objectsByUuid].
+  /// Port of Ruby `Project#generate_available_uuid_list`.
   void _generateBatch() {
-    String uuid;
-    do {
-      uuid = UuidGenerator.generate();
-    } while (_generatedUuids.contains(uuid));
-    _generatedUuids.add(uuid);
-    _availableUuids.add(uuid);
+    final excluded = <String>{..._generatedUuids, ...objectsByUuid.keys};
+    for (var i = 0; i < _uuidBatchSize; i++) {
+      final uuid = UuidGenerator.generate(random: uuidRandom);
+      if (excluded.add(uuid)) {
+        _generatedUuids.add(uuid);
+        _availableUuids.add(uuid);
+      }
+    }
   }
 
   // ---------------------------------------------------------------------------

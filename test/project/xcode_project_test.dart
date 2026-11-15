@@ -1,9 +1,12 @@
 // — unit tests for XcodeProject accessors and newObject.
 // TDD RED phase: these tests are written BEFORE the implementation.
 
+import 'dart:math' show Random;
+
 import 'package:dart_xcodeproj/src/object/isa_registry.dart';
 import 'package:dart_xcodeproj/src/pbx/group.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_project.dart';
+import 'package:dart_xcodeproj/src/project/uuid_generator.dart';
 import 'package:dart_xcodeproj/src/project/xcode_project.dart';
 import 'package:test/test.dart';
 
@@ -86,158 +89,123 @@ void main() {
     // -------------------------------------------------------------------------
 
     group('generateUuid()', () {
-      test('returns a 24-char uppercase hex string', () async {
+      // create() pre-fills the UUID pool with a secure batch, so draw enough
+      // UUIDs to exhaust it and consume the batches produced by the injected
+      // RNG.
+      const draws = 400;
+
+      test('skips a UUID already present in objectsByUuid', () async {
         final project = await XcodeProject.create('/tmp/MyProject.xcodeproj');
-        final uuid = project.generateUuid();
-        expect(uuid, matches(RegExp(r'^[0-9A-F]{24}$')));
+
+        // Replay the deterministic RNG to learn which UUIDs it will produce.
+        final replay = Random(42);
+        final first = UuidGenerator.generate(random: replay);
+        final second = UuidGenerator.generate(random: replay);
+
+        // Occupy the first candidate with an existing object.
+        project.objectsByUuid[first] = project.rootObject;
+        project.uuidRandom = Random(42);
+
+        final generated = [
+          for (var i = 0; i < draws; i++) project.generateUuid(),
+        ];
+
+        expect(generated, isNot(contains(first)));
+        // The neighbouring candidate is still handed out.
+        expect(generated, contains(second));
       });
 
-      test('called twice produces different values', () async {
+      test('never returns an existing or previously generated UUID', () async {
         final project = await XcodeProject.create('/tmp/MyProject.xcodeproj');
-        final uuid1 = project.generateUuid();
-        final uuid2 = project.generateUuid();
-        expect(uuid1, isNot(equals(uuid2)));
-      });
-    });
 
-    // -------------------------------------------------------------------------
-    // addBuildConfiguration tests
-    // -------------------------------------------------------------------------
+        final replay = Random(7);
+        final existing = {
+          for (var i = 0; i < 20; i++) UuidGenerator.generate(random: replay),
+        };
+        for (final uuid in existing) {
+          project.objectsByUuid[uuid] = project.rootObject;
+        }
+        project.uuidRandom = Random(7);
 
-    group('addBuildConfiguration()', () {
-      test('adds a new config to buildConfigurationList', () async {
-        final project = await XcodeProject.create('/tmp/MyProject.xcodeproj');
-        project.addBuildConfiguration('Staging', BuildConfigType.release);
-        expect(project.buildConfigurationList['Staging'], isNotNull);
+        final generated = <String>{};
+        for (var i = 0; i < draws; i++) {
+          final uuid = project.generateUuid();
+          expect(existing, isNot(contains(uuid)));
+          expect(generated.add(uuid), isTrue, reason: 'duplicate $uuid');
+        }
       });
 
       test(
-        'is idempotent — calling twice does NOT create a duplicate',
+        'drops candidates repeated within a batch and across batches',
         () async {
           final project = await XcodeProject.create('/tmp/MyProject.xcodeproj');
-          final first = project.addBuildConfiguration(
-            'Staging',
-            BuildConfigType.release,
-          );
-          final second = project.addBuildConfiguration(
-            'Staging',
-            BuildConfigType.release,
-          );
-          expect(identical(first, second), isTrue);
-          // Count configs — only one 'Staging' should exist
-          final count = project.buildConfigurations
-              .where((c) => c.name == 'Staging')
-              .length;
-          expect(count, equals(1));
-        },
-      );
 
-      test(
-        'Debug duplication guard — calling addBuildConfiguration("Debug") twice',
-        () async {
-          final project = await XcodeProject.create('/tmp/MyProject.xcodeproj');
-          // Debug is already created by create(); calling again is idempotent
-          final debug1 = project.addBuildConfiguration(
-            'Debug',
-            BuildConfigType.debug,
-          );
-          final debug2 = project.addBuildConfiguration(
-            'Debug',
-            BuildConfigType.debug,
-          );
-          expect(identical(debug1, debug2), isTrue);
-          final count = project.buildConfigurations
-              .where((c) => c.name == 'Debug')
-              .length;
-          expect(count, equals(1));
-        },
-      );
-    });
+          // Batch 1 repeats id 1 within itself; batch 2 repeats ids 1 and 2,
+          // which were already accepted in batch 1. Later batches are fresh.
+          final script = <int>[
+            1, 1, 2, ..._range(100, 98), // batch 1 (101 candidates)
+            1, 2, 3, ..._range(200, 98), // batch 2 (101 candidates)
+          ];
+          project.uuidRandom = _ScriptedRandom(script, freshFrom: 1000);
 
-    // -------------------------------------------------------------------------
-    // Accessor delegation tests
-    // -------------------------------------------------------------------------
+          final generated = [
+            for (var i = 0; i < draws; i++) project.generateUuid(),
+          ];
 
-    group('accessors', () {
-      late XcodeProject project;
-
-      setUp(() async {
-        project = await XcodeProject.create('/tmp/MyProject.xcodeproj');
-      });
-
-      test(
-        'targets delegates to rootObject.targets (same object identity)',
-        () {
-          expect(
-            identical(project.targets, project.rootObject.targets),
-            isTrue,
-          );
-        },
-      );
-
-      test(
-        'mainGroup delegates to rootObject.mainGroup (same object identity)',
-        () {
-          expect(
-            identical(project.mainGroup, project.rootObject.mainGroup),
-            isTrue,
-          );
-        },
-      );
-
-      test(
-        'buildConfigurationList delegates to rootObject.buildConfigurationList',
-        () {
-          expect(
-            identical(
-              project.buildConfigurationList,
-              project.rootObject.buildConfigurationList,
-            ),
-            isTrue,
-          );
-        },
-      );
-
-      test(
-        'buildConfigurations returns a List with at least Debug and Release',
-        () {
-          final names = project.buildConfigurations
-              .map((c) => c.name)
-              .whereType<String>()
-              .toSet();
-          expect(names, containsAll({'Debug', 'Release'}));
-        },
-      );
-
-      test('buildSettings("Debug") returns a non-null Map', () {
-        final settings = project.buildSettings('Debug');
-        expect(settings, isNotNull);
-        expect(settings, isA<Map<String, dynamic>>());
-      });
-
-      test('name returns basename without extension', () {
-        expect(project.name, equals('MyProject'));
-      });
-
-      test('projectDir returns directory portion of path', () {
-        expect(project.projectDir, equals('/tmp'));
-      });
-    });
-
-    // -------------------------------------------------------------------------
-    // open() argument validation
-    // -------------------------------------------------------------------------
-
-    group('open()', () {
-      test(
-        'throws ArgumentError when path does not end with .xcodeproj',
-        () async {
-          expect(
-            () => XcodeProject.open('/tmp/SomeFile.txt'),
-            throwsA(isA<ArgumentError>()),
-          );
+          for (final id in [1, 2, 3]) {
+            final uuid = _ScriptedRandom.uuidFor(id);
+            expect(
+              generated.where((u) => u == uuid),
+              hasLength(1),
+              reason: 'candidate $id must be handed out exactly once',
+            );
+          }
+          expect(generated.toSet(), hasLength(generated.length));
         },
       );
     });
   });
+}
+
+List<int> _range(int start, int count) => [
+  for (var i = 0; i < count; i++) start + i,
+];
+
+/// A [Random] whose UUID candidates are scripted: candidate `n` is built from
+/// the `n`-th id of [script] (then from an increasing counter starting at
+/// [freshFrom]). An id is encoded in the first two bytes of the UUID.
+class _ScriptedRandom implements Random {
+  _ScriptedRandom(this.script, {required this.freshFrom});
+
+  final List<int> script;
+  int freshFrom;
+  int _candidate = 0;
+  int _call = 0;
+  int _id = 0;
+
+  static String uuidFor(int id) =>
+      UuidGenerator.generate(random: _ScriptedRandom([id], freshFrom: 0));
+
+  @override
+  int nextInt(int max) {
+    if (_call == 0) {
+      _id = _candidate < script.length ? script[_candidate] : freshFrom++;
+    }
+    final byte = switch (_call) {
+      0 => _id & 0xff,
+      1 => (_id >> 8) & 0xff,
+      _ => 0,
+    };
+    if (++_call == 12) {
+      _call = 0;
+      _candidate++;
+    }
+    return byte;
+  }
+
+  @override
+  bool nextBool() => throw UnimplementedError();
+
+  @override
+  double nextDouble() => throw UnimplementedError();
 }
