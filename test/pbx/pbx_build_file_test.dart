@@ -3,7 +3,9 @@
 import 'package:dart_xcodeproj/src/object/abstract_object.dart';
 import 'package:dart_xcodeproj/src/object/isa_registry.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_build_file.dart';
+import 'package:dart_xcodeproj/src/pbx/pbx_build_phase.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_file_reference.dart';
+import 'package:dart_xcodeproj/src/pbx/pbx_reference_proxy.dart';
 import 'package:test/test.dart';
 
 import '../object/helpers/mock_object_graph.dart';
@@ -408,6 +410,50 @@ void main() {
       visited.add(buildFile.uuid);
       final tree = buildFile.toTreeHash(visited);
       expect(tree['fileRef'], startsWith('<cycle:'));
+    });
+  });
+
+  group('PBXBuildFile annotation for unnamed file references', () {
+    // Mirrors PBXFileReference#display_name: the basename of path, except
+    // for BUILT_PRODUCTS_DIR references, which keep the full path.
+    String annotationFor({required String path, required String sourceTree}) {
+      final phase = graph.newObject((g, u) => PBXSourcesBuildPhase(g, u));
+      final buildFile = graph.newObject((g, u) => PBXBuildFile(g, u));
+      final fileRef = graph.newObject((g, u) => PBXFileReference(g, u));
+      fileRef.path = path;
+      fileRef.sourceTree = sourceTree;
+      buildFile.fileRef = fileRef;
+      phase.files.add(buildFile);
+      return buildFile.asciiPlistAnnotation;
+    }
+
+    test('uses the basename of a nested path', () {
+      expect(
+        annotationFor(path: '../shared/Nested.swift', sourceTree: '<group>'),
+        equals(' Nested.swift in Sources '),
+      );
+    });
+
+    test('keeps the full path for BUILT_PRODUCTS_DIR', () {
+      expect(
+        annotationFor(path: 'sub/App.app', sourceTree: 'BUILT_PRODUCTS_DIR'),
+        equals(' sub/App.app in Sources '),
+      );
+    });
+
+    test('keeps the full path of an unnamed reference proxy', () {
+      // Ruby: PBXReferenceProxy#display_name is the full path.
+      final phase = graph.newObject((g, u) => PBXFrameworksBuildPhase(g, u));
+      final buildFile = graph.newObject((g, u) => PBXBuildFile(g, u));
+      final proxy = graph.newObject((g, u) => PBXReferenceProxy(g, u));
+      proxy.path = '../Products/Foo.framework';
+      proxy.sourceTree = '<group>';
+      buildFile.fileRef = proxy;
+      phase.files.add(buildFile);
+      expect(
+        buildFile.asciiPlistAnnotation,
+        equals(' ../Products/Foo.framework in Frameworks '),
+      );
     });
   });
 }

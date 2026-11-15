@@ -81,6 +81,23 @@ class PBXFileSystemSynchronizedBuildFileExceptionSet extends AbstractObject {
     ...super.attributeOrder,
   ];
 
+  @override
+  List<String> get referenceAttributes => const [_kTarget];
+
+  /// `Exceptions for "<folder>" folder in "<target>" target`, where the folder
+  /// is the display name of the synchronized group holding this exception set.
+  /// Falls back to the ISA-derived default while the set is detached from a
+  /// group or a target (Ruby raises there).
+  /// Port of `PBXFileSystemSynchronizedBuildFileExceptionSet#display_name`.
+  @override
+  String get displayName {
+    final folder = referrers.whereType<AbstractObject>().firstOrNull;
+    final owner = _target;
+    if (folder == null || owner == null) return super.displayName;
+    return 'Exceptions for "${folder.displayName}" folder in '
+        '"${owner.displayName}" target';
+  }
+
   // ---------------------------------------------------------------------------
   // Serialization
   // ---------------------------------------------------------------------------
@@ -219,6 +236,24 @@ class PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet
     ..._ownAttributes,
     ...super.attributeOrder,
   ];
+
+  @override
+  List<String> get referenceAttributes => const [_kBuildPhase];
+
+  /// `Exceptions for "<folder>" folder in "<phase>" build phase`, where the
+  /// folder is the display name of the synchronized group holding this
+  /// exception set. Falls back to the ISA-derived default while the set is
+  /// detached from a group or a build phase (Ruby raises there).
+  /// Port of
+  /// `PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet#display_name`.
+  @override
+  String get displayName {
+    final folder = referrers.whereType<AbstractObject>().firstOrNull;
+    final phase = _buildPhase;
+    if (folder == null || phase == null) return super.displayName;
+    return 'Exceptions for "${folder.displayName}" folder in '
+        '"${phase.displayName}" build phase';
+  }
 
   // ---------------------------------------------------------------------------
   // Serialization

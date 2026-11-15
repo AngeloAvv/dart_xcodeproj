@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Bug Fixes
+
+- Saving a project no longer guesses `/* ... */` annotations from the shape of strings: the pbxproj writer prints only the annotations carried by the object model, like Ruby's `Project#to_ascii_plist`. String attributes that hold a UUID (`remoteGlobalIDString`, `TestTargetID`) are no longer annotated, and an open + save of a pristine Flutter iOS/macOS project now matches what Ruby writes
+- `PBXReferenceProxy` annotates `path` by its basename, `XCConfigurationList` reads `Build configuration list for <isa> "<name>"` from its owner, and `XCBuildConfiguration.displayName` is its `name`
+
+### Features
+
+- `AbstractObject.toAsciiPlist()` / `toAsciiPlistHash()` and the `AnnotatedString` / `AnnotatedDictionary` plist nodes, which `AsciiPlistWriter` prints annotations from. `AbstractObject.asciiPlistAnnotation` is now `String?`: `null` (no annotation) for the main group. `AsciiPlistWriter.write` given a plain map no longer annotates anything
+- `PBXProject.name`, `PBXContainerItemProxy.isRemote` and `PBXGroup.isMainGroup`
+
 ## 0.3.0
 
 ### Bug Fixes

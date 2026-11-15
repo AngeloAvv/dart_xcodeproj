@@ -7,10 +7,11 @@
 // - Within each ISA group, UUIDs sort lexicographically
 // - Within each object dict, `isa` key sorts first
 // - Indentation uses TAB characters (\t), NOT spaces
-// - Annotations (/* ... */) are reconstructed from the objects graph
+// - Annotations (/* ... */) are printed exactly as received, via
+//   [AnnotatedString] / [AnnotatedDictionary] nodes; plain strings are never
+//   annotated (port of Nanaimo, where only annotated nodes carry comments)
 
-import 'package:path/path.dart' as p;
-
+import 'annotated_nodes.dart';
 import 'unicode.dart';
 
 /// Serializes a parsed plist [Map] back to Apple ASCII plist text.
@@ -34,24 +35,6 @@ class AsciiPlistWriter {
   /// Set to false inside flat-mode dictionaries (PBXBuildFile, PBXFileReference).
   bool _newlines = true;
 
-  /// The top-level `objects` map, captured in [write] for annotation lookups.
-  /// Port of the objects graph that Nanaimo nodes carry as .annotation.
-  late Map<String, dynamic> _objects;
-
-  /// The `rootObject` UUID, captured for the hard-coded "Project object" annotation.
-  String? _rootObjectUuid;
-
-  /// Cache of PBXBuildFile UUID → annotation string.
-  /// Annotation format: "{fileRef name/path} in {buildPhase name}".
-  /// Built once in [write] by scanning all build phase `files` arrays.
-  final Map<String, String> _buildFileAnnotations = {};
-
-  /// Cache of XCConfigurationList UUID → annotation string.
-  /// Annotation format: "Build configuration list for {ownerType} \"{ownerName}\"".
-  /// Built once in [write] by scanning PBXProject + PBXNativeTarget/PBXAggregateTarget
-  /// objects for their `buildConfigurationList` field.
-  final Map<String, String> _configListAnnotations = {};
-
   /// Serialize a parsed plist Map back to ASCII plist text.
   /// Port of Writer#write:
   /// ```ruby
@@ -63,166 +46,13 @@ class AsciiPlistWriter {
   /// ```
   /// First 14 bytes of the result are always `// !$*UTF8*$!\n`.
   String write(Map<String, dynamic> plist) {
-    _objects = (plist['objects'] as Map?)?.cast<String, dynamic>() ?? const {};
-    _rootObjectUuid = plist['rootObject'] as String?;
     _out.clear();
-    _buildFileAnnotations.clear();
-    _configListAnnotations.clear();
     _indent = 0;
     _newlines = true;
-    _buildAnnotationCaches();
     _out.write(_utf8Magic);
     _writeRootDictionary(plist);
     _out.write('\n');
     return _out.toString();
-  }
-
-  /// Pre-build annotation caches that require graph traversal.
-  /// 1. PBXBuildFile annotations: scan all build phases, map each file UUID to
-  /// "{fileRef name/path} in {phaseName}".
-  /// 2. XCConfigurationList annotations: scan PBXProject + target objects for
-  /// their `buildConfigurationList` field, map to
-  /// "Build configuration list for {ownerType} \"{ownerName}\"".
-  void _buildAnnotationCaches() {
-    // ISAs that are build phases (have a `files` array of PBXBuildFile UUIDs)
-    const buildPhaseIsas = {
-      'PBXSourcesBuildPhase',
-      'PBXResourcesBuildPhase',
-      'PBXFrameworksBuildPhase',
-      'PBXCopyFilesBuildPhase',
-      'PBXHeadersBuildPhase',
-      'PBXShellScriptBuildPhase',
-    };
-
-    // ISAs that own a buildConfigurationList
-    const targetIsas = {
-      'PBXNativeTarget',
-      'PBXAggregateTarget',
-      'PBXLegacyTarget',
-      'PBXProject',
-    };
-
-    for (final entry in _objects.entries) {
-      final obj = entry.value;
-      if (obj is! Map) continue;
-      final isa = obj['isa'] as String? ?? '';
-
-      if (buildPhaseIsas.contains(isa)) {
-        // Build PBXBuildFile annotations from this build phase
-        final phaseName = _phaseNameFor(obj);
-        final files = obj['files'];
-        if (files is List) {
-          for (final fileUuid in files) {
-            if (fileUuid is! String) continue;
-            final fileObj = _objects[fileUuid];
-            if (fileObj is! Map) continue;
-            // Ruby's PBXBuildFile#display_name prefers productRef (SPM
-            // product dependencies have no fileRef) over fileRef.
-            final productRef = fileObj['productRef'] as String?;
-            final fileRef = fileObj['fileRef'] as String?;
-            String? refLabel;
-            if (productRef != null) {
-              final productObj = _objects[productRef];
-              if (productObj is Map) {
-                final productName = productObj['productName'];
-                if (productName is String && productName.isNotEmpty) {
-                  refLabel = productName;
-                }
-              }
-            } else if (fileRef != null) {
-              final refObj = _objects[fileRef];
-              if (refObj is Map) {
-                final name = refObj['name'];
-                if (name is String && name.isNotEmpty) {
-                  refLabel = name;
-                } else {
-                  // Mirrors PBXFileReference#display_name: the basename of
-                  // path, except for BUILT_PRODUCTS_DIR (product references).
-                  // PBXReferenceProxy#display_name always keeps the full path.
-                  final path = refObj['path'];
-                  if (path is String && path.isNotEmpty) {
-                    final keepsFullPath =
-                        refObj['isa'] == 'PBXReferenceProxy' ||
-                        refObj['sourceTree'] == 'BUILT_PRODUCTS_DIR';
-                    refLabel = keepsFullPath ? path : p.basename(path);
-                  }
-                }
-              }
-            }
-            if (refLabel != null && phaseName != null) {
-              _buildFileAnnotations[fileUuid] = '$refLabel in $phaseName';
-            }
-          }
-        }
-      }
-
-      if (targetIsas.contains(isa)) {
-        // Build XCConfigurationList annotations
-        final configListUuid = obj['buildConfigurationList'] as String?;
-        if (configListUuid == null) continue;
-
-        // CR-05 fix: use the actual ISA instead of hardcoding 'PBXNativeTarget'.
-        // This correctly handles PBXAggregateTarget and PBXLegacyTarget as well.
-        final String ownerType = isa;
-
-        // Determine owner name.
-        // for PBXProject, check the project's own 'name' attribute
-        // first; fall back to the first target's name only when absent.
-        String? ownerName;
-        if (isa == 'PBXProject') {
-          // Prefer the project object's own 'name' field.
-          final projectName = obj['name'];
-          if (projectName is String && projectName.isNotEmpty) {
-            ownerName = projectName;
-          } else {
-            // Fallback: use the first target's name (works for simple projects
-            // where project name == target name).
-            final targets = obj['targets'];
-            if (targets is List && targets.isNotEmpty) {
-              final targetUuid = targets.first;
-              if (targetUuid is String) {
-                final targetObj = _objects[targetUuid];
-                if (targetObj is Map) {
-                  ownerName = targetObj['name'] as String?;
-                }
-              }
-            }
-          }
-        } else {
-          ownerName = obj['name'] as String?;
-        }
-
-        if (ownerName != null) {
-          _configListAnnotations[configListUuid] =
-              'Build configuration list for $ownerType "$ownerName"';
-        }
-      }
-    }
-  }
-
-  /// Returns the canonical name for a build phase object.
-  /// Build phases have a `name` attribute (optional). If absent, uses the
-  /// default name for the ISA:
-  /// - PBXSourcesBuildPhase → "Sources"
-  /// - PBXResourcesBuildPhase → "Resources"
-  /// - PBXFrameworksBuildPhase → "Frameworks"
-  /// - PBXCopyFilesBuildPhase → "CopyFiles"
-  /// - PBXHeadersBuildPhase → "Headers"
-  /// - PBXShellScriptBuildPhase → "ShellScript" (Xcode always writes a name,
-  ///   but Ruby's `display_name` falls back to the stripped ISA)
-  String? _phaseNameFor(Map<dynamic, dynamic> obj) {
-    final name = obj['name'];
-    if (name is String && name.isNotEmpty) return name;
-    final isa = obj['isa'] as String? ?? '';
-    return switch (isa) {
-      'PBXSourcesBuildPhase' => 'Sources',
-      'PBXResourcesBuildPhase' => 'Resources',
-      'PBXFrameworksBuildPhase' => 'Frameworks',
-      'PBXCopyFilesBuildPhase' => 'CopyFiles',
-      'PBXHeadersBuildPhase' => 'Headers',
-      'PBXShellScriptBuildPhase' => 'ShellScript',
-      _ => null,
-    };
   }
 
   // ---------------------------------------------------------------------------
@@ -249,9 +79,6 @@ class AsciiPlistWriter {
       _out.write(' = ');
       if (key == 'objects' && value is Map) {
         _writeObjectsSection(value.cast<String, dynamic>());
-      } else if (key == 'rootObject' && value is String) {
-        // Hard-coded annotation: rootObject = UUID /* Project object */;
-        _writeStringValue(value, forceAnnotation: 'Project object');
       } else {
         _writeObject(value);
       }
@@ -269,7 +96,13 @@ class AsciiPlistWriter {
   /// Dispatches to the appropriate write method based on runtime type.
   /// Port of Writer#write_object.
   void _writeObject(dynamic value) {
-    if (value is Map<String, dynamic>) {
+    if (value is AnnotatedDictionary) {
+      _writeDictionary(value.value);
+      _writeAnnotation(value.annotation);
+    } else if (value is AnnotatedString) {
+      _writeStringQuotedIfNecessary(value.value);
+      _writeAnnotation(value.annotation);
+    } else if (value is Map<String, dynamic>) {
       _writeDictionary(value);
     } else if (value is Map) {
       _writeDictionary(value.cast<String, dynamic>());
@@ -278,7 +111,7 @@ class AsciiPlistWriter {
     } else if (value is List) {
       _writeArray(value);
     } else if (value is String) {
-      _writeStringValue(value);
+      _writeStringQuotedIfNecessary(value);
     }
     // other types are not expected in a pbxproj plist
   }
@@ -286,18 +119,6 @@ class AsciiPlistWriter {
   // ---------------------------------------------------------------------------
   // String write — quoting, annotation reconstruction
   // ---------------------------------------------------------------------------
-
-  /// Writes a string value, quoting if necessary, appending UUID annotation if applicable.
-  /// Port of Writer#write_string + write_quoted_string + write_annotation
-  /// If [forceAnnotation] is provided, it overrides the UUID lookup (used for rootObject).
-  void _writeStringValue(String s, {String? forceAnnotation}) {
-    _writeStringQuotedIfNecessary(s);
-    final annotation =
-        forceAnnotation ?? (_looksLikeUuid(s) ? _annotationFor(s) : null);
-    if (annotation != null && annotation.isNotEmpty) {
-      _writeAnnotation(annotation);
-    }
-  }
 
   /// Writes a string, quoting if [_needsQuoting] returns true.
   /// Port of Writer#write_string_quoted_if_necessary.
@@ -317,11 +138,13 @@ class AsciiPlistWriter {
     _out.write('"');
   }
 
-  /// Writes ` /* annotation */` after a token.
-  /// Port of Writer#write_annotation.
-  /// Note: Xcode annotations have spaces inside: ` /* text */`
-  void _writeAnnotation(String annotation) {
-    _out.write(' /* $annotation */');
+  /// Writes ` /*annotation*/` after a token; nothing for a `null` or empty
+  /// [annotation].
+  /// Port of Writer#write_annotation. The annotation carries its own padding
+  /// spaces (`' Runner '`), as Ruby's `ascii_plist_annotation` does.
+  void _writeAnnotation(String? annotation) {
+    if (annotation == null || annotation.isEmpty) return;
+    _out.write(' /*$annotation*/');
   }
 
   // ---------------------------------------------------------------------------
@@ -343,7 +166,7 @@ class AsciiPlistWriter {
     _indent++;
     for (final item in items) {
       _writeIndent();
-      _writeArrayElement(item);
+      _writeObject(item);
       _out.write(',');
       if (_newlines) {
         _out.write('\n');
@@ -354,15 +177,6 @@ class AsciiPlistWriter {
     _indent--;
     _writeIndent();
     _out.write(')');
-  }
-
-  /// Writes a single array element, appending UUID annotation if applicable.
-  void _writeArrayElement(dynamic item) {
-    if (item is String) {
-      _writeStringValue(item);
-    } else {
-      _writeObject(item);
-    }
   }
 
   // ---------------------------------------------------------------------------
@@ -461,6 +275,8 @@ class AsciiPlistWriter {
   /// end
   /// write_dictionary_end # emit '\t}'
   /// ```
+  /// Entries may be plain maps or [AnnotatedDictionary]s; the annotation of
+  /// the latter is written after the entry's UUID key.
   void _writeObjectsSection(Map<String, dynamic> objects) {
     _out.write('{\n');
     _indent++; // now at indent 2 (inside objects dict)
@@ -468,7 +284,7 @@ class AsciiPlistWriter {
     // Group by ISA
     final grouped = <String, List<MapEntry<String, dynamic>>>{};
     for (final entry in objects.entries) {
-      final obj = entry.value;
+      final obj = _unwrapDictionary(entry.value);
       String isa = '';
       if (obj is Map) {
         final isaVal = obj['isa'];
@@ -491,10 +307,14 @@ class AsciiPlistWriter {
       for (final entry in entries) {
         // guard the cast — skip malformed entries gracefully (matches
         // Ruby behavior of skipping non-hash entries in the objects section).
-        if (entry.value is! Map) continue;
+        final obj = _unwrapDictionary(entry.value);
+        if (obj is! Map) continue;
         _writeObjectEntry(
           entry.key,
-          (entry.value as Map).cast<String, dynamic>(),
+          obj.cast<String, dynamic>(),
+          annotation: entry.value is AnnotatedDictionary
+              ? (entry.value as AnnotatedDictionary).annotation
+              : null,
           flat: flat,
         );
       }
@@ -506,6 +326,10 @@ class AsciiPlistWriter {
     _writeIndent();
     _out.write('}');
   }
+
+  /// The plain map behind an [AnnotatedDictionary], or [value] unchanged.
+  static dynamic _unwrapDictionary(dynamic value) =>
+      value is AnnotatedDictionary ? value.value : value;
 
   /// Writes a single object entry in the objects section.
   /// Format (pretty):
@@ -522,15 +346,13 @@ class AsciiPlistWriter {
   void _writeObjectEntry(
     String uuid,
     Map<String, dynamic> obj, {
+    required String? annotation,
     required bool flat,
   }) {
     _writeIndent();
-    // Write UUID with annotation from the object's own name/path/isa
-    _out.write(uuid);
-    final headerAnnotation = _annotationFor(uuid);
-    if (headerAnnotation != null) {
-      _writeAnnotation(headerAnnotation);
-    }
+    // The UUID key carries the object's own annotation, if it was given one.
+    _writeStringQuotedIfNecessary(uuid);
+    _writeAnnotation(annotation);
     _out.write(' = ');
 
     // Write the object dict (flat or pretty)
@@ -580,85 +402,6 @@ class AsciiPlistWriter {
   /// Port of PBXProjWriter#flat_dictionary?.
   static bool _isFlatIsa(String isa) =>
       isa == 'PBXBuildFile' || isa == 'PBXFileReference';
-
-  // ---------------------------------------------------------------------------
-  // Annotation reconstruction — byte-identity
-  // ---------------------------------------------------------------------------
-
-  /// True iff [s] looks like a 24-char uppercase-hex Xcode UUID.
-  /// Port of UUID format spec: `^[0-9A-F]{24}$`
-  static final RegExp _uuidPattern = RegExp(r'^[0-9A-F]{24}$');
-  static bool _looksLikeUuid(String s) => _uuidPattern.hasMatch(s);
-
-  /// Returns the annotation string for [uuid], or null if unknown.
-  /// Annotation strategy (priority order):
-  /// 1. Hard-coded: `rootObject` UUID → 'Project object'
-  /// 2. PBXBuildFile: built-in cache → '{fileRef name} in {phaseName}'
-  /// 3. XCConfigurationList: built-in cache → 'Build configuration list for ...'
-  /// 4. Generic: prefer `name`, then `path`, then `isa`
-  /// 5. UUID not in objects map → null (no annotation)
-  String? _annotationFor(String uuid) {
-    if (uuid == _rootObjectUuid) return 'Project object';
-
-    // Check PBXBuildFile-specific cache
-    final buildFileAnno = _buildFileAnnotations[uuid];
-    if (buildFileAnno != null) return buildFileAnno;
-
-    // Check XCConfigurationList-specific cache
-    final configListAnno = _configListAnnotations[uuid];
-    if (configListAnno != null) return configListAnno;
-
-    final obj = _objects[uuid];
-    if (obj is! Map) return null;
-
-    // Per-class overrides of Ruby's `ascii_plist_annotation`
-    // (the full object-model port lives in the `asciiPlistAnnotation` getters).
-    final isa = obj['isa'] as String? ?? '';
-    switch (isa) {
-      case 'PBXContainerItemProxy':
-      case 'PBXTargetDependency':
-        return isa;
-      case 'XCSwiftPackageProductDependency':
-        final productName = obj['productName'];
-        if (productName is String && productName.isNotEmpty) {
-          return productName;
-        }
-      case 'XCLocalSwiftPackageReference':
-        final relativePath = obj['relativePath'];
-        if (relativePath is String && relativePath.isNotEmpty) {
-          return '$isa "${p.basename(relativePath)}"';
-        }
-      case 'XCRemoteSwiftPackageReference':
-        final url = obj['repositoryURL'];
-        if (url is String && url.isNotEmpty) {
-          var base = p.basename(url);
-          if (base.endsWith('.git') && base.length > 4) {
-            base = base.substring(0, base.length - 4);
-          }
-          return '$isa "$base"';
-        }
-    }
-
-    // Build phase default names (used when `name` attr is absent in the plist)
-    // PBXSourcesBuildPhase, PBXResourcesBuildPhase, PBXFrameworksBuildPhase
-    // do NOT have a `name` attribute in the plist; their display name is derived
-    // from ISA. PBXCopyFilesBuildPhase and PBXShellScriptBuildPhase DO have `name`.
-    final phaseDefault = _phaseNameFor(obj);
-    if (phaseDefault != null) {
-      // For build phases: use `name` attr if present, otherwise ISA-derived default
-      final name = obj['name'];
-      if (name is String && name.isNotEmpty) return name;
-      return phaseDefault;
-    }
-
-    final name = obj['name'];
-    if (name is String && name.isNotEmpty) return name;
-    final path = obj['path'];
-    if (path is String && path.isNotEmpty) return path;
-    // Do NOT fall back to ISA — objects without name/path have no annotation.
-    // (e.g. the root PBXGroup in runner.pbxproj has no name/path/annotation)
-    return null;
-  }
 
   // ---------------------------------------------------------------------------
   // Quoting rule — port of QUOTED_STRING_REGEXP

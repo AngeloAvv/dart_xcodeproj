@@ -24,6 +24,7 @@ import 'groups_position.dart';
 import '../pbx/pbx_project.dart';
 import '../pbx/xc_build_configuration.dart';
 import '../pbx/xc_configuration_list.dart';
+import '../plist/annotated_nodes.dart';
 import '../plist/ascii_plist_writer.dart';
 import '../plist/plist_reader.dart';
 import 'uuid_generator.dart';
@@ -505,9 +506,11 @@ class XcodeProject implements ObjectGraph {
       });
 
     // Build the objects map (sorted insertion order = serialization order).
+    // Each object carries its own annotation, as does the `rootObject`
+    // reference; plain string attributes are never annotated.
     final objectsMap = <String, dynamic>{};
     for (final obj in sorted) {
-      objectsMap[obj.uuid] = obj.toHash();
+      objectsMap[obj.uuid] = obj.toAsciiPlist();
     }
 
     // Build top-level plist with EXACT key order (insertion order preserved in
@@ -517,7 +520,10 @@ class XcodeProject implements ObjectGraph {
       'classes': _classes,
       'objectVersion': _objectVersion,
       'objects': objectsMap,
-      'rootObject': _rootObject!.uuid,
+      'rootObject': AnnotatedString(
+        _rootObject!.uuid,
+        _rootObject!.asciiPlistAnnotation,
+      ),
     };
 
     return AsciiPlistWriter().write(plistMap);

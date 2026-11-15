@@ -82,6 +82,15 @@ class PBXFileSystemSynchronizedRootGroup extends AbstractObject {
   ];
 
   @override
+  List<String> get referenceAttributes => const [_kExceptions];
+
+  /// The folder [path] when set, else the ISA-derived default. Used as the
+  /// pbxproj annotation of the group and of every reference to it.
+  /// Port of `PBXFileSystemSynchronizedRootGroup#display_name`.
+  @override
+  String get displayName => path ?? super.displayName;
+
+  @override
   void initializeDefaults() {
     sourceTree = '<group>';
   }

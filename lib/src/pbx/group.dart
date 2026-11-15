@@ -5,6 +5,7 @@ import '../object/object_list.dart';
 import '../project/groups_position.dart';
 import 'pbx_build_file.dart';
 import 'pbx_file_reference.dart';
+import 'pbx_project.dart';
 
 // =============================================================================
 // PBXGroup
@@ -123,6 +124,26 @@ class PBXGroup extends AbstractObject {
     if (path != null) return p.basename(path!);
     return super.displayName;
   }
+
+  /// Whether this group is the project's main group.
+  /// Port of `self.equal?(project.main_group)`.
+  bool get isMainGroup => referrers.any(
+    (referrer) => referrer is PBXProject && identical(referrer.mainGroup, this),
+  );
+
+  /// `null` for the main group, which Xcode writes without a comment;
+  /// otherwise ` $name ` or ` basename(path) `. A group with neither gets
+  /// the blank annotation `'  '`, as in Ruby (`" #{display_name} "` with a
+  /// `nil` display name).
+  /// Port of `PBXGroup#ascii_plist_annotation`.
+  @override
+  String? get asciiPlistAnnotation {
+    if (isMainGroup) return null;
+    return ' ${name ?? (path != null ? p.basename(path!) : '')} ';
+  }
+
+  @override
+  List<String> get referenceAttributes => const [_kChildren];
 
   // ---------------------------------------------------------------------------
   // Serialization
@@ -489,6 +510,12 @@ class XCVersionGroup extends PBXGroup {
   List<String> get attributeOrder => [
     ..._ownXCAttributes,
     ...super.attributeOrder,
+  ];
+
+  @override
+  List<String> get referenceAttributes => [
+    _kCurrentVersion,
+    ...super.referenceAttributes,
   ];
 
   // ---------------------------------------------------------------------------

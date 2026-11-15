@@ -1,3 +1,5 @@
+import 'package:path/path.dart' as p;
+
 import '../object/abstract_object.dart';
 import 'pbx_build_file.dart';
 import 'pbx_container_item_proxy.dart';
@@ -84,7 +86,17 @@ class PBXReferenceProxy extends AbstractObject {
   ];
 
   @override
+  List<String> get referenceAttributes => const [_kRemoteRef];
+
+  @override
   String get displayName => name ?? path ?? super.displayName;
+
+  /// ` $name ` or ` basename(path) `, so a proxy for `Sub/Foo.framework` is
+  /// annotated `Foo.framework`; blank (`'  '`) when it has neither, as Ruby.
+  /// Port of `PBXReferenceProxy#ascii_plist_annotation`.
+  @override
+  String get asciiPlistAnnotation =>
+      ' ${name ?? (path != null ? p.basename(path!) : '')} ';
 
   // ---------------------------------------------------------------------------
   // Serialization

@@ -2,6 +2,7 @@ import '../object/abstract_object.dart';
 import '../object/object_dictionary.dart';
 import '../object/object_list.dart';
 import '../project/groups_position.dart';
+import '../project/xcode_project.dart';
 import 'group.dart';
 import 'pbx_file_reference.dart';
 import 'pbx_native_target.dart';
@@ -189,10 +190,37 @@ class PBXProject extends AbstractObject {
   ];
 
   @override
+  List<String> get referenceAttributes => const [
+    _kTargets,
+    _kBuildConfigurationList,
+    _kMainGroup,
+    _kProductRefGroup,
+    _kPackageReferences,
+  ];
+
+  @override
   String get displayName => 'Project object';
 
-  // Do NOT add a 'name' getter that participates in serialization.
-  // XcodeProject computes name from the project file path.
+  /// The project name: the basename of the `.xcodeproj` bundle when the
+  /// project is an [XcodeProject], else [displayName]. Not a serialized
+  /// attribute.
+  /// Port of `PBXProject#name` (`project.path.basename('.xcodeproj')`).
+  String get name {
+    final graph = project;
+    return graph is XcodeProject ? graph.name : displayName;
+  }
+
+  @override
+  Map<String, dynamic> toAsciiPlistHash() {
+    final hash = super.toAsciiPlistHash();
+    // Each project reference is a dictionary of object references.
+    if (projectReferences.isNotEmpty) {
+      hash[_kProjectReferences] = projectReferences
+          .map((d) => d.toAsciiPlist())
+          .toList();
+    }
+    return hash;
+  }
 
   // ---------------------------------------------------------------------------
   // Serialization
