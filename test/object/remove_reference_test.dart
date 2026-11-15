@@ -117,6 +117,19 @@ void main() {
       expect(holder.toHash().toString(), isNot(contains(first.uuid)));
     });
 
+    test('removes every occurrence of a repeated object', () {
+      final holder = _Holder(graph, 'A' * 24);
+      final repeated = PBXFileReference(graph, 'B' * 24);
+      final other = PBXFileReference(graph, 'C' * 24);
+      holder.many.addAll([repeated, other, repeated]);
+
+      repeated.removeFromProject();
+
+      expect(holder.many.toList(), [other]);
+      expect(holder.toHash().toString(), isNot(contains(repeated.uuid)));
+      expect(repeated.referrers, isEmpty);
+    });
+
     test('removes the object from references-by-keys dictionaries', () {
       final holder = _Holder(graph, 'A' * 24);
       final group = PBXFileReference(graph, 'B' * 24);
@@ -146,6 +159,22 @@ void main() {
       expect(phase.toHash()['files'], isEmpty);
       expect(buildFile.referrers, isEmpty);
       expect(graph.objectsByUuid.containsKey(buildFile.uuid), isFalse);
+    });
+
+    test('drops a build file listed twice in the same phase', () {
+      final phase = PBXSourcesBuildPhase(graph, '1' * 24);
+      graph.objectsByUuid[phase.uuid] = phase;
+      final buildFile = phase.addFileReference(
+        PBXFileReference(graph, '2' * 24),
+      );
+      phase.files.add(buildFile);
+      expect(phase.toHash()['files'], [buildFile.uuid, buildFile.uuid]);
+
+      buildFile.removeFromProject();
+
+      expect(phase.files, isEmpty);
+      expect(phase.toHash()['files'], isEmpty);
+      expect(buildFile.referrers, isEmpty);
     });
 
     test('keeps the remaining build files in the phase', () {

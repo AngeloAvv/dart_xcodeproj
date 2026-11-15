@@ -130,7 +130,9 @@ abstract class AbstractObject {
       if (identical(attribute.get(), obj)) attribute.set(null);
     }
     for (final list in toManyAttributes) {
-      list.remove(obj);
+      // A list may hold the same object more than once; drop every occurrence
+      // (Ruby's Array#delete does the same) so no dangling UUID is left.
+      while (list.remove(obj)) {}
     }
     for (final dictionaries in referencesByKeysAttributes) {
       var held = false;
