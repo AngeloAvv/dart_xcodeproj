@@ -2,6 +2,7 @@ import 'package:path/path.dart' as p;
 
 import '../object/abstract_object.dart';
 import '../object/object_graph.dart';
+import 'pbx_build_file.dart';
 
 /// Represents a file on disk referenced by the Xcode project.
 /// Port of [PBXFileReference]. Every file in the project
@@ -123,6 +124,24 @@ class PBXFileReference extends AbstractObject {
   // ---------------------------------------------------------------------------
 
   PBXFileReference(super.project, super.uuid);
+
+  /// The build files associated with this file reference.
+  /// Port of `build_files` (`referrers.grep(PBXBuildFile)`).
+  List<PBXBuildFile> get buildFiles =>
+      referrers.whereType<PBXBuildFile>().toList();
+
+  /// Removes this file reference from the project together with every
+  /// [PBXBuildFile] that points to it, so build phases never keep dangling
+  /// entries.
+  /// Port of `remove_from_project`
+  /// (`build_files.each(&:remove_from_project); super`).
+  @override
+  void removeFromProject() {
+    for (final buildFile in buildFiles) {
+      buildFile.removeFromProject();
+    }
+    super.removeFromProject();
+  }
 
   // ---------------------------------------------------------------------------
   // AbstractObject overrides
