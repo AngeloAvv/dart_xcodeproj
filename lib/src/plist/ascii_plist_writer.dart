@@ -136,8 +136,14 @@ class AsciiPlistWriter {
                 if (name is String && name.isNotEmpty) {
                   refLabel = name;
                 } else {
+                  // Mirrors PBXFileReference#display_name: the basename of
+                  // path, except for BUILT_PRODUCTS_DIR (product references).
                   final path = refObj['path'];
-                  if (path is String && path.isNotEmpty) refLabel = path;
+                  if (path is String && path.isNotEmpty) {
+                    refLabel = refObj['sourceTree'] == 'BUILT_PRODUCTS_DIR'
+                        ? path
+                        : p.basename(path);
+                  }
                 }
               }
             }

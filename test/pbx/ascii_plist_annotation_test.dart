@@ -126,6 +126,51 @@ void main() {
     });
   });
 
+  group('AsciiPlistWriter build file labels for unnamed file references', () {
+    String write(Map<String, dynamic> fileRef) {
+      final plist = <String, dynamic>{
+        'archiveVersion': '1',
+        'classes': <String, dynamic>{},
+        'objectVersion': '70',
+        'objects': <String, dynamic>{
+          'AAAAAAAAAAAAAAAAAAAAAAAA': {
+            'isa': 'PBXBuildFile',
+            'fileRef': 'BBBBBBBBBBBBBBBBBBBBBBBB',
+          },
+          'BBBBBBBBBBBBBBBBBBBBBBBB': {'isa': 'PBXFileReference', ...fileRef},
+          'CCCCCCCCCCCCCCCCCCCCCCCC': {
+            'isa': 'PBXSourcesBuildPhase',
+            'files': ['AAAAAAAAAAAAAAAAAAAAAAAA'],
+          },
+        },
+        'rootObject': 'DDDDDDDDDDDDDDDDDDDDDDDD',
+      };
+      return AsciiPlistWriter().write(plist);
+    }
+
+    test('uses the basename of a nested path without a name', () {
+      final out = write({
+        'path': '../shared/Nested.swift',
+        'sourceTree': '<group>',
+      });
+      expect(
+        out,
+        contains('AAAAAAAAAAAAAAAAAAAAAAAA /* Nested.swift in Sources */ ='),
+      );
+    });
+
+    test('keeps the full path for BUILT_PRODUCTS_DIR', () {
+      final out = write({
+        'path': 'sub/App.app',
+        'sourceTree': 'BUILT_PRODUCTS_DIR',
+      });
+      expect(
+        out,
+        contains('AAAAAAAAAAAAAAAAAAAAAAAA /* sub/App.app in Sources */ ='),
+      );
+    });
+  });
+
   // The pbxproj writer works on the raw plist, not on the object model. Until
   // it is ported onto asciiPlistAnnotation, check it agrees with Ruby for the
   // classes covered above.
