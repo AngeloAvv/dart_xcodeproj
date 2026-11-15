@@ -94,5 +94,38 @@ void main() {
         ),
       );
     });
+
+    test('keeps document-level comments around the root, in order', () {
+      final doc = XmlDocument.parse(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<!-- b1 --><!-- b2 --><Scheme/><!-- a1 --><!-- a2 -->',
+      );
+      final out = SchemeXmlFormatter.format(doc);
+      expect(
+        out,
+        equals(
+          '<?xml version="1.0" encoding="UTF-8"?>\n'
+          '<!-- b1 -->\n'
+          '<!-- b2 -->\n'
+          '<Scheme>\n'
+          '</Scheme>\n'
+          '<!-- a1 -->\n'
+          '<!-- a2 -->\n',
+        ),
+      );
+      expect(() => XmlDocument.parse(out), returnsNormally);
+    });
+
+    test('formats text nested deeper than the wrapping width', () {
+      // 27 nested elements put the text at indentation 81 (> width 80),
+      // matching Ruby, which wraps at the last space.
+      final doc = XmlDocument.parse(
+        '<Scheme>${'<X>' * 27}hello world${'</X>' * 27}</Scheme>',
+      );
+      late String out;
+      expect(() => out = SchemeXmlFormatter.format(doc), returnsNormally);
+      expect(out, contains('${' ' * 84}hello\n${' ' * 84}world\n'));
+      expect(() => XmlDocument.parse(out), returnsNormally);
+    });
   });
 }

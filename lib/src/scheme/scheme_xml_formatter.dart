@@ -14,7 +14,8 @@ import 'package:xml/xml.dart';
 /// `REXML::Formatters::Pretty#write_text`.
 /// - Child elements are indented `kIndent` spaces per depth level.
 /// - Closing tag is aligned with its opening tag (`depth` spaces indent).
-/// - A single trailing newline follows the root closing tag.
+/// - Comments before and after the root element are kept, one per line.
+/// - A single trailing newline follows the last top-level node.
 /// This class cannot be instantiated.
 class SchemeXmlFormatter {
   SchemeXmlFormatter._();
@@ -27,8 +28,19 @@ class SchemeXmlFormatter {
   static String format(XmlDocument doc) {
     final buf = StringBuffer();
     buf.write('<?xml version="1.0" encoding="UTF-8"?>\n');
-    _writeElement(doc.rootElement, 0, buf);
-    buf.write('\n');
+    // Document-level comments are kept in their original order around the
+    // root element, one per line (as Ruby's REXML formatter does).
+    for (final node in doc.children) {
+      switch (node) {
+        case XmlElement():
+          _writeElement(node, 0, buf);
+          buf.write('\n');
+        case XmlComment():
+          buf.write('<!--${node.value}-->\n');
+        default:
+          break;
+      }
+    }
     return buf.toString();
   }
 
@@ -59,7 +71,11 @@ class SchemeXmlFormatter {
     final width = _kWidth - level;
     final parts = <String>[];
     while (s.length > width) {
-      final place = s.lastIndexOf(' ', width);
+      // Ruby's `rindex` counts a negative position from the end of the
+      // string, which happens when the indentation exceeds the text width.
+      final from = width < 0 ? s.length + width : width;
+      if (from < 0) break;
+      final place = s.lastIndexOf(' ', from);
       if (place < 0) break;
       parts.add(s.substring(0, place));
       s = s.substring(place + 1);
