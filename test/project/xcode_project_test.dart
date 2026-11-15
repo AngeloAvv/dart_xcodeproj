@@ -134,6 +134,78 @@ void main() {
           expect(generated.add(uuid), isTrue, reason: 'duplicate $uuid');
         }
       });
+
+      test(
+        'drops candidates repeated within a batch and across batches',
+        () async {
+          final project = await XcodeProject.create('/tmp/MyProject.xcodeproj');
+
+          // Batch 1 repeats id 1 within itself; batch 2 repeats ids 1 and 2,
+          // which were already accepted in batch 1. Later batches are fresh.
+          final script = <int>[
+            1, 1, 2, ..._range(100, 98), // batch 1 (101 candidates)
+            1, 2, 3, ..._range(200, 98), // batch 2 (101 candidates)
+          ];
+          project.uuidRandom = _ScriptedRandom(script, freshFrom: 1000);
+
+          final generated = [
+            for (var i = 0; i < draws; i++) project.generateUuid(),
+          ];
+
+          for (final id in [1, 2, 3]) {
+            final uuid = _ScriptedRandom.uuidFor(id);
+            expect(
+              generated.where((u) => u == uuid),
+              hasLength(1),
+              reason: 'candidate $id must be handed out exactly once',
+            );
+          }
+          expect(generated.toSet(), hasLength(generated.length));
+        },
+      );
     });
   });
+}
+
+List<int> _range(int start, int count) => [
+  for (var i = 0; i < count; i++) start + i,
+];
+
+/// A [Random] whose UUID candidates are scripted: candidate `n` is built from
+/// the `n`-th id of [script] (then from an increasing counter starting at
+/// [freshFrom]). An id is encoded in the first two bytes of the UUID.
+class _ScriptedRandom implements Random {
+  _ScriptedRandom(this.script, {required this.freshFrom});
+
+  final List<int> script;
+  int freshFrom;
+  int _candidate = 0;
+  int _call = 0;
+  int _id = 0;
+
+  static String uuidFor(int id) =>
+      UuidGenerator.generate(random: _ScriptedRandom([id], freshFrom: 0));
+
+  @override
+  int nextInt(int max) {
+    if (_call == 0) {
+      _id = _candidate < script.length ? script[_candidate] : freshFrom++;
+    }
+    final byte = switch (_call) {
+      0 => _id & 0xff,
+      1 => (_id >> 8) & 0xff,
+      _ => 0,
+    };
+    if (++_call == 12) {
+      _call = 0;
+      _candidate++;
+    }
+    return byte;
+  }
+
+  @override
+  bool nextBool() => throw UnimplementedError();
+
+  @override
+  double nextDouble() => throw UnimplementedError();
 }
