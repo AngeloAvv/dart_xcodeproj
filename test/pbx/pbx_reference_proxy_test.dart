@@ -269,7 +269,7 @@ void main() {
           multiLine: true,
         ).allMatches(pbxproj).map((m) => m.group(1)).toSet();
         final used = RegExp(
-          r'(?<![\t0-9A-F])[0-9A-F]{24}(?![0-9A-F])',
+          r'(?<![0-9A-F])[0-9A-F]{24}(?![0-9A-F])',
         ).allMatches(pbxproj).map((m) => m.group(0)).toSet();
         // remoteGlobalIDString points into the *sub-project*, not this one.
         final remote = RegExp(
@@ -284,6 +284,27 @@ void main() {
           reason: 'UUIDs referenced but not defined (root: $rootObject)',
         );
       }
+
+      test('the dangling-UUID helper flags undefined tab-indented entries', () {
+        const defined = 'AAAAAAAAAAAAAAAAAAAAAAAA';
+        const undefinedUuid = 'BBBBBBBBBBBBBBBBBBBBBBBB';
+        String pbxproj(String entry) =>
+            '''
+\t\t$defined /* Sources */ = {
+\t\t\tisa = PBXSourcesBuildPhase;
+\t\t\tfiles = (
+\t\t\t\t$entry /* a.m in Sources */,
+\t\t\t);
+\t\t};
+\t\trootObject = $defined;
+''';
+
+        expectNoDanglingUuids(pbxproj(defined));
+        expect(
+          () => expectNoDanglingUuids(pbxproj(undefinedUuid)),
+          throwsA(isA<TestFailure>()),
+        );
+      });
 
       test('buildFiles lists the build files of the proxy', () async {
         final project = await open('subproject.pbxproj');
