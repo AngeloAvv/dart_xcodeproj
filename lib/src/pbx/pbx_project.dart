@@ -344,21 +344,28 @@ class PBXProject extends AbstractObject {
   // ---------------------------------------------------------------------------
 
   @override
-  void removeReference(AbstractObject obj) {
-    if (identical(_mainGroup, obj)) mainGroup = null;
-    if (identical(_productRefGroup, obj)) productRefGroup = null;
-    if (identical(_buildConfigurationList, obj)) buildConfigurationList = null;
-    if (obj is AbstractTarget) targets.remove(obj);
-    // super.removeReference is intentionally omitted — AbstractObject.removeReference
-    // is a no-op base implementation. Subclasses of PBXProject (none currently)
-    // should call super explicitly if added.
-    packageReferences.remove(obj);
-    // Propagate to every ObjectDictionary entry in projectReferences so that
-    // stale UUID references are cleaned when an object is removed from the project.
-    for (final dict in projectReferences) {
-      dict.removeReference(obj);
-    }
-  }
+  List<ToOneAttribute> get toOneAttributes => [
+    ToOneAttribute(
+      get: () => mainGroup,
+      set: (v) => mainGroup = v as PBXGroup?,
+    ),
+    ToOneAttribute(
+      get: () => productRefGroup,
+      set: (v) => productRefGroup = v as PBXGroup?,
+    ),
+    ToOneAttribute(
+      get: () => buildConfigurationList,
+      set: (v) => buildConfigurationList = v as XCConfigurationList?,
+    ),
+  ];
+
+  @override
+  List<ObjectList<Object>> get toManyAttributes => [targets, packageReferences];
+
+  @override
+  List<ObjectList<ObjectDictionary>> get referencesByKeysAttributes => [
+    projectReferences,
+  ];
 
   // ---------------------------------------------------------------------------
   // : sort cascade

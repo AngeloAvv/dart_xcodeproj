@@ -187,12 +187,8 @@ class XCConfigurationList extends AbstractObject {
   // Relationship lifecycle
   // ---------------------------------------------------------------------------
 
-  /// Called by [removeFromProject] on each referrer that holds a field pointing
-  /// to [obj]. Removes [obj] from [buildConfigurations] if it is a member.
   @override
-  void removeReference(AbstractObject obj) {
-    if (obj is XCBuildConfiguration) buildConfigurations.remove(obj);
-  }
+  List<ObjectList<Object>> get toManyAttributes => [buildConfigurations];
 
   @override
   void clearRelationships() {

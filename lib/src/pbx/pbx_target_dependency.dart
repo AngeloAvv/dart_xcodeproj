@@ -165,10 +165,16 @@ class PBXTargetDependency extends AbstractObject {
   // ---------------------------------------------------------------------------
 
   @override
-  void removeReference(AbstractObject obj) {
-    if (identical(_target, obj)) target = null;
-    if (identical(_targetProxy, obj)) targetProxy = null;
-  }
+  List<ToOneAttribute> get toOneAttributes => [
+    ToOneAttribute(
+      get: () => target,
+      set: (v) => target = v as AbstractTarget?,
+    ),
+    ToOneAttribute(
+      get: () => targetProxy,
+      set: (v) => targetProxy = v as PBXContainerItemProxy?,
+    ),
+  ];
 
   @override
   void clearRelationships() {

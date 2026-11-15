@@ -152,9 +152,7 @@ class PBXFileSystemSynchronizedRootGroup extends AbstractObject {
   // ---------------------------------------------------------------------------
 
   @override
-  void removeReference(AbstractObject obj) {
-    exceptions.remove(obj);
-  }
+  List<ObjectList<Object>> get toManyAttributes => [exceptions];
 
   @override
   void clearRelationships() {

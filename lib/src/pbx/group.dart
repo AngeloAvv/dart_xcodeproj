@@ -215,9 +215,7 @@ class PBXGroup extends AbstractObject {
   // ---------------------------------------------------------------------------
 
   @override
-  void removeReference(AbstractObject obj) {
-    children.remove(obj);
-  }
+  List<ObjectList<Object>> get toManyAttributes => [children];
 
   @override
   void clearRelationships() {
@@ -504,10 +502,13 @@ class XCVersionGroup extends PBXGroup {
   // ---------------------------------------------------------------------------
 
   @override
-  void removeReference(AbstractObject obj) {
-    if (identical(_currentVersion, obj)) currentVersion = null;
-    super.removeReference(obj);
-  }
+  List<ToOneAttribute> get toOneAttributes => [
+    ...super.toOneAttributes,
+    ToOneAttribute(
+      get: () => currentVersion,
+      set: (v) => currentVersion = v as PBXFileReference?,
+    ),
+  ];
 
   @override
   void clearRelationships() {
