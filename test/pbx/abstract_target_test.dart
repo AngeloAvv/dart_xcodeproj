@@ -373,6 +373,39 @@ void main() {
     );
 
     test(
+      'resolvedBuildSetting keeps \$(inherited) when resolving against xcconfig',
+      () async {
+        registerPhase3Types();
+        registerPhase4Types();
+        final project = await XcodeProject.create('/tmp/TestProject.xcodeproj');
+        final target = project.newObject((g, u) => PBXNativeTarget(g, u));
+        target.name = 'MyApp';
+        project.rootObject.targets.add(target);
+
+        final targetConfigList = project.newObject(
+          (g, u) => XCConfigurationList(g, u),
+        );
+        target.buildConfigurationList = targetConfigList;
+        final targetDebug = project.newObject(
+          (g, u) => XCBuildConfiguration(g, u),
+        );
+        targetDebug.name = 'Debug';
+        targetDebug.buildSettings['OTHER_LDFLAGS'] = [r'$(inherited)', '-ObjC'];
+        targetConfigList.buildConfigurations.add(targetDebug);
+
+        final projDebug = project.buildConfigurationList['Debug'];
+        projDebug?.buildSettings['OTHER_LDFLAGS'] = ['-lz'];
+
+        final result = target.resolvedBuildSetting(
+          'OTHER_LDFLAGS',
+          resolveAgainstXcconfig: true,
+        );
+        // Matches Ruby: the project value is spliced in at `$(inherited)`.
+        expect(result['Debug'], equals(['-lz', '-ObjC']));
+      },
+    );
+
+    test(
       'commonResolvedBuildSetting returns single String? when all configs agree',
       () async {
         registerPhase3Types();

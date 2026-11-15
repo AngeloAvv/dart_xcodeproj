@@ -388,6 +388,9 @@ class XCBuildConfiguration extends AbstractObject {
       for (final match in matches) {
         final varName = _extractVarName(match);
         if (varName == null) continue;
+        // `$(inherited)` is expanded later by [_expandBuildSetting]; keep it
+        // untouched here (matches Ruby's resolve_variable_substitution).
+        if (varName == 'inherited') continue;
         // Mutual recursion guard: if we're already resolving this variable, return sentinel.
         if (activeKeys.contains(varName)) return _kMutualRecursionSentinel;
         final resolved = resolveBuildSetting(varName, Set.of(activeKeys));
