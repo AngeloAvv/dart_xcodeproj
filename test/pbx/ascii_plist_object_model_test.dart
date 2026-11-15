@@ -5,8 +5,11 @@
 import 'dart:io';
 
 import 'package:dart_xcodeproj/src/pbx/group.dart';
+import 'package:dart_xcodeproj/src/pbx/pbx_build_phase.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_container_item_proxy.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_file_reference.dart';
+import 'package:dart_xcodeproj/src/pbx/pbx_file_system_synchronized_exception_set.dart';
+import 'package:dart_xcodeproj/src/pbx/pbx_file_system_synchronized_root_group.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_native_target.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_reference_proxy.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_target_dependency.dart';
@@ -192,6 +195,85 @@ void main() {
         ..remoteInfo = 'X';
       final portal = proxy.toAsciiPlistHash()['containerPortal'];
       expect(portal, AnnotatedString(file.uuid, ' Other.xcodeproj '));
+    });
+  });
+
+  group('file-system-synchronized groups', () {
+    test('annotations follow the folder, target and build phase', () async {
+      final target = addTarget('App');
+      final folder = project.newObject(
+        (g, u) => PBXFileSystemSynchronizedRootGroup(g, u),
+      )..path = 'Sources';
+      project.mainGroup.children.add(folder);
+      final buildFileSet = project.newObject(
+        (g, u) => PBXFileSystemSynchronizedBuildFileExceptionSet(g, u),
+      )..target = target;
+      final phase = project.newObject((g, u) => PBXCopyFilesBuildPhase(g, u))
+        ..name = 'Copy Headers';
+      target.buildPhases.add(phase);
+      final membershipSet = project.newObject(
+        (g, u) =>
+            PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet(
+              g,
+              u,
+            ),
+      )..buildPhase = phase;
+      folder.exceptions
+        ..add(buildFileSet)
+        ..add(membershipSet);
+
+      expect(folder.asciiPlistAnnotation, ' Sources ');
+      expect(
+        buildFileSet.asciiPlistAnnotation,
+        ' Exceptions for "Sources" folder in "App" target ',
+      );
+      expect(
+        membershipSet.asciiPlistAnnotation,
+        ' Exceptions for "Sources" folder in "Copy Headers" build phase ',
+      );
+
+      await project.save();
+      final text = File('${project.path}/project.pbxproj').readAsStringSync();
+      expect(text, contains('${folder.uuid} /* Sources */ = {'));
+      expect(
+        text,
+        contains(
+          '${buildFileSet.uuid} /* Exceptions for "Sources" folder in "App" '
+          'target */ = {',
+        ),
+      );
+      expect(
+        text,
+        contains(
+          '${membershipSet.uuid} /* Exceptions for "Sources" folder in '
+          '"Copy Headers" build phase */,',
+        ),
+      );
+    });
+
+    test('detached sets fall back to the ISA-derived name', () {
+      final folder = project.newObject(
+        (g, u) => PBXFileSystemSynchronizedRootGroup(g, u),
+      );
+      expect(folder.displayName, 'FileSystemSynchronizedRootGroup');
+      final buildFileSet = project.newObject(
+        (g, u) => PBXFileSystemSynchronizedBuildFileExceptionSet(g, u),
+      );
+      expect(
+        buildFileSet.displayName,
+        'FileSystemSynchronizedBuildFileExceptionSet',
+      );
+      final membershipSet = project.newObject(
+        (g, u) =>
+            PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet(
+              g,
+              u,
+            ),
+      );
+      expect(
+        membershipSet.displayName,
+        'FileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet',
+      );
     });
   });
 }
