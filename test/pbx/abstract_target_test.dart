@@ -302,6 +302,36 @@ void main() {
     );
 
     test(
+      'resolvedBuildSetting does not re-expand \$(inherited) inserted from the project value',
+      () async {
+        registerPhase3Types();
+        registerPhase4Types();
+        final project = await XcodeProject.create('/tmp/TestProject.xcodeproj');
+        final target = project.newObject((g, u) => PBXNativeTarget(g, u));
+        target.name = 'MyApp';
+        project.rootObject.targets.add(target);
+
+        final targetConfigList = project.newObject(
+          (g, u) => XCConfigurationList(g, u),
+        );
+        target.buildConfigurationList = targetConfigList;
+        final targetDebug = project.newObject(
+          (g, u) => XCBuildConfiguration(g, u),
+        );
+        targetDebug.name = 'Debug';
+        targetDebug.buildSettings['MY_PATH'] = r'$(inherited)/target';
+        targetConfigList.buildConfigurations.add(targetDebug);
+
+        final projDebug = project.buildConfigurationList['Debug'];
+        projDebug?.buildSettings['MY_PATH'] = r'${inherited}/project';
+
+        final result = target.resolvedBuildSetting('MY_PATH');
+        // Matches Ruby: the keyword carried by the project value stays as is.
+        expect(result['Debug'], equals(r'${inherited}/project/target'));
+      },
+    );
+
+    test(
       'resolvedBuildSetting splices project-level array into \$(inherited)',
       () async {
         registerPhase3Types();

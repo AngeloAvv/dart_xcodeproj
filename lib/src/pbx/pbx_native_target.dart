@@ -310,12 +310,17 @@ abstract class AbstractTarget extends AbstractObject {
       ];
     }
     final replacement = inherited is List ? inherited.join(' ') : '$inherited';
-    var result = value as String;
-    for (final kw in MiscConstants.inheritedKeywords) {
-      result = result.replaceAll(kw, replacement);
-    }
-    return result;
+    // Single pass over the original string (like Ruby's `gsub(Regexp.union(..))`)
+    // so keywords inside [replacement] are not expanded a second time.
+    return (value as String).replaceAllMapped(
+      _inheritedPattern,
+      (_) => replacement,
+    );
   }
+
+  static final RegExp _inheritedPattern = RegExp(
+    MiscConstants.inheritedKeywords.map(RegExp.escape).join('|'),
+  );
 
   bool _deepEquals(dynamic a, dynamic b) {
     if (a is List && b is List) {
