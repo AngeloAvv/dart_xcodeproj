@@ -138,11 +138,13 @@ class AsciiPlistWriter {
                 } else {
                   // Mirrors PBXFileReference#display_name: the basename of
                   // path, except for BUILT_PRODUCTS_DIR (product references).
+                  // PBXReferenceProxy#display_name always keeps the full path.
                   final path = refObj['path'];
                   if (path is String && path.isNotEmpty) {
-                    refLabel = refObj['sourceTree'] == 'BUILT_PRODUCTS_DIR'
-                        ? path
-                        : p.basename(path);
+                    final keepsFullPath =
+                        refObj['isa'] == 'PBXReferenceProxy' ||
+                        refObj['sourceTree'] == 'BUILT_PRODUCTS_DIR';
+                    refLabel = keepsFullPath ? path : p.basename(path);
                   }
                 }
               }

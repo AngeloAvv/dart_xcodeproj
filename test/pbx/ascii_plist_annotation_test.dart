@@ -127,7 +127,10 @@ void main() {
   });
 
   group('AsciiPlistWriter build file labels for unnamed file references', () {
-    String write(Map<String, dynamic> fileRef) {
+    String write(
+      Map<String, dynamic> fileRef, {
+      String isa = 'PBXFileReference',
+    }) {
       final plist = <String, dynamic>{
         'archiveVersion': '1',
         'classes': <String, dynamic>{},
@@ -137,7 +140,7 @@ void main() {
             'isa': 'PBXBuildFile',
             'fileRef': 'BBBBBBBBBBBBBBBBBBBBBBBB',
           },
-          'BBBBBBBBBBBBBBBBBBBBBBBB': {'isa': 'PBXFileReference', ...fileRef},
+          'BBBBBBBBBBBBBBBBBBBBBBBB': {'isa': isa, ...fileRef},
           'CCCCCCCCCCCCCCCCCCCCCCCC': {
             'isa': 'PBXSourcesBuildPhase',
             'files': ['AAAAAAAAAAAAAAAAAAAAAAAA'],
@@ -167,6 +170,19 @@ void main() {
       expect(
         out,
         contains('AAAAAAAAAAAAAAAAAAAAAAAA /* sub/App.app in Sources */ ='),
+      );
+    });
+
+    test('keeps the full path for an unnamed PBXReferenceProxy', () {
+      final out = write({
+        'path': '../Products/Foo.framework',
+        'sourceTree': '<group>',
+      }, isa: 'PBXReferenceProxy');
+      expect(
+        out,
+        contains(
+          'AAAAAAAAAAAAAAAAAAAAAAAA /* ../Products/Foo.framework in Sources */ =',
+        ),
       );
     });
   });
