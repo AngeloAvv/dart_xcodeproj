@@ -68,6 +68,70 @@ void main() {
         });
       });
 
+      group('addResources', () {
+        test('adds a build file per reference to the resources phase', () {
+          final first = project.newFile('Runner/a.png');
+          final second = project.newFile('Runner/b.json');
+          final phase = runner.resourcesBuildPhase;
+          final before = phase.files.length;
+
+          runner.addResources([first, second]);
+
+          final added = phase.files.skip(before).toList();
+          expect(added.map((f) => f.fileRef), [first, second]);
+          expect(first.referrers, contains(added.first));
+        });
+
+        test('skips a reference that is already in the phase', () {
+          final ref = project.newFile('Runner/a.png');
+          runner.addResources([ref]);
+          final count = runner.resourcesBuildPhase.files.length;
+
+          runner.addResources([ref]);
+
+          expect(runner.resourcesBuildPhase.files, hasLength(count));
+        });
+
+        test('skips a resource the project already had', () {
+          final phase = runner.resourcesBuildPhase;
+          final existing = phase.files.first.fileRef!;
+          final count = phase.files.length;
+
+          runner.addResources([existing]);
+
+          expect(phase.files, hasLength(count));
+        });
+
+        test('adds a reference given twice only once', () {
+          final ref = project.newFile('Runner/a.png');
+          final count = runner.resourcesBuildPhase.files.length;
+
+          runner.addResources([ref, ref]);
+
+          expect(runner.resourcesBuildPhase.files, hasLength(count + 1));
+        });
+
+        test('creates the resources phase when the target has none', () {
+          final bare = bareTarget(project);
+
+          bare.addResources([project.newFile('Runner/a.png')]);
+
+          final phase = bare.buildPhases.single as PBXResourcesBuildPhase;
+          expect(phase.files, hasLength(1));
+        });
+
+        test(
+          'does nothing, not even creating the phase, for no references',
+          () {
+            final bare = bareTarget(project);
+
+            bare.addResources([]);
+
+            expect(bare.buildPhases, isEmpty);
+          },
+        );
+      });
+
       group('headersBuildPhase', () {
         test('creates the phase after the existing ones, then reuses it', () {
           final before = runner.buildPhases.toList();

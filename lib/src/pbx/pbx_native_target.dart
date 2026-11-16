@@ -741,6 +741,18 @@ class PBXNativeTarget extends AbstractTarget {
   PBXHeadersBuildPhase get headersBuildPhase =>
       _findOrCreateBuildPhase((g, u) => PBXHeadersBuildPhase(g, u));
 
+  /// Adds [resourceFileReferences] to the [resourcesBuildPhase] of the target.
+  ///
+  /// A reference that already has a build file in the phase is skipped (also
+  /// when it appears twice in the list). The phase is created only when there
+  /// is a reference to add it to: an empty list leaves [buildPhases] alone.
+  /// Port of `PBXNativeTarget#add_resources`.
+  void addResources(Iterable<AbstractObject> resourceFileReferences) {
+    for (final file in resourceFileReferences) {
+      resourcesBuildPhase.addFileReference(file, avoidDuplicates: true);
+    }
+  }
+
   /// Finds the first build phase whose class is exactly [T], or creates one
   /// and appends it to [buildPhases].
   /// Port of `PBXNativeTarget#find_or_create_build_phase_by_class`. Ruby also

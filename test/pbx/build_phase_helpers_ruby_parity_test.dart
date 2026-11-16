@@ -33,6 +33,18 @@ final Map<String, void Function(XcodeProject)> _scenarios = {
     bare.sourceBuildPhase;
     _runner(project).headersBuildPhase;
   },
+  'add_resources': (project) {
+    final target = _runner(project);
+    final first = project.newFile('Runner/Assets/a.png');
+    final second = project.newFile('Runner/b.json');
+    final third = project.newFile('Runner/c.txt');
+    target.addResources([first, second]);
+    target.addResources([first]);
+    target.addResources([target.resourcesBuildPhase.files.first.fileRef!]);
+    target.addResources([]);
+    target.addResources([third, third]);
+    bareTarget(project).addResources([first]);
+  },
 };
 
 /// Opens the pristine project [name] from a `Runner.xcodeproj` bundle in a
