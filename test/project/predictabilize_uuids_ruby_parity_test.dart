@@ -3,8 +3,9 @@
 //
 // The expected files are the output of xcodeproj (see generate.rb in
 // test/fixtures/predictabilized/, which also lists the gem version) for the
-// pristine `flutter create` projects in test/fixtures/annotations/ and for
-// test/fixtures/subproject.pbxproj. Every input is opened from a bundle named
+// pristine `flutter create` projects in test/fixtures/annotations/, for
+// test/fixtures/subproject.pbxproj and for a project that has the kinds of
+// object Flutter's do not (kitchen_sink.rb). Every input is opened from a bundle named
 // `Runner.xcodeproj`, the seed of all the paths.
 
 import 'dart:io';
@@ -23,6 +24,7 @@ const _inputs = {
   'macos_spm': '$_fixtures/annotations/macos_spm.xcodeproj/project.pbxproj',
   'edge': '$_fixtures/annotations/edge.xcodeproj/project.pbxproj',
   'subproject': '$_fixtures/subproject.pbxproj',
+  'kitchen_sink': '$_expectedDir/kitchen_sink.pbxproj',
 };
 
 /// The UUIDs that are not objects of the project and so are not rewritten: the

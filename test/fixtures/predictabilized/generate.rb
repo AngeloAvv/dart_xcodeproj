@@ -14,7 +14,9 @@
 #   and macOS, with and without Swift Package Manager integration, and the
 #   hand-written edge cases);
 # - test/fixtures/subproject.pbxproj, which has a `projectReferences`
-#   dictionary and test target attributes.
+#   dictionary and test target attributes;
+# - kitchen_sink.pbxproj next to this script (written by kitchen_sink.rb),
+#   which has the kinds of object the Flutter projects lack.
 #
 # For the two projects the round-trip tests use, that file is then opened and
 # saved once more by Ruby, which gives `<name>.ruby_saved.pbxproj`, the output
@@ -33,6 +35,7 @@ inputs = {}
   inputs[name] = File.join(annotations, "#{name}.xcodeproj", 'project.pbxproj')
 end
 inputs['subproject'] = File.join(fixtures, 'subproject.pbxproj')
+inputs['kitchen_sink'] = File.join(dir, 'kitchen_sink.pbxproj')
 
 round_trip = %w[ios macos_spm]
 
