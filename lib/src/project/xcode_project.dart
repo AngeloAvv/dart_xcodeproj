@@ -281,6 +281,13 @@ class XcodeProject implements ObjectGraph {
     T Function(ObjectGraph, String) factory, {
     String? uuid,
   }) {
+    if (uuid != null && objectsByUuid.containsKey(uuid)) {
+      throw ArgumentError.value(
+        uuid,
+        'uuid',
+        'already used by ${objectsByUuid[uuid]!.isa} in this project',
+      );
+    }
     final objectUuid = uuid ?? generateUuid();
     final obj = factory(this, objectUuid);
     obj.initializeDefaults();

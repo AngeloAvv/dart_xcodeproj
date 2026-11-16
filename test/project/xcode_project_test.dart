@@ -94,6 +94,30 @@ void main() {
         );
         expect(group.uuid, equals(_customUuid));
       });
+
+      test(
+        'throws on a uuid already in objectsByUuid and keeps the existing object',
+        () async {
+          final project = await XcodeProject.create('/tmp/MyProject.xcodeproj');
+          final existing = project.rootObject;
+          final takenUuid = existing.uuid;
+
+          expect(
+            () => project.newObject(
+              (g, u) => PBXGroup(g, u),
+              uuid: takenUuid,
+            ),
+            throwsA(
+              isA<ArgumentError>().having(
+                (e) => e.toString(),
+                'message',
+                allOf(contains(takenUuid), contains('already')),
+              ),
+            ),
+          );
+          expect(project.objectsByUuid[takenUuid], same(existing));
+        },
+      );
     });
 
     // -------------------------------------------------------------------------
