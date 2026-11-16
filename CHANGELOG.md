@@ -6,6 +6,7 @@
 
 - Saving a project no longer guesses `/* ... */` annotations from the shape of strings: the pbxproj writer prints only the annotations carried by the object model, like Ruby's `Project#to_ascii_plist`. String attributes that hold a UUID (`remoteGlobalIDString`, `TestTargetID`) are no longer annotated, and an open + save of a pristine Flutter iOS/macOS project now matches what Ruby writes
 - `PBXReferenceProxy` annotates `path` by its basename, `XCConfigurationList` reads `Build configuration list for <isa> "<name>"` from its owner, and `XCBuildConfiguration.displayName` is its `name`
+- `PBXTargetDependency.displayName` falls back to the proxy's `remoteInfo` (a dependency on a target of another project), and `PBXBuildRule.displayName` is its `name`, like Ruby's `display_name`
 
 ### Features
 
@@ -13,6 +14,7 @@
 - `PBXProject.name`, `PBXContainerItemProxy.isRemote` and `PBXGroup.isMainGroup`
 - `XcodeProject.newObject` (and `ObjectGraph.newObject`) now takes an optional `uuid` so tools that create objects idempotently can pin stable UUIDs. A UUID that is invalid per `UuidGenerator.isValid` or already present in `objectsByUuid` throws an `ArgumentError` and never replaces the registered object; without `uuid` a generated one is used as before. Classes implementing `ObjectGraph` must accept the new parameter. This is new API: Ruby only offers the private `Klass.new(project, uuid)`
 - `UuidGenerator.deterministic(seed, {length = 24})` returns the first 24 or 32 uppercase hex characters of the MD5 of `seed`, so tools can create stable, Xcode-looking 24-char UUIDs. With `length: 32` it equals `generateDeterministic` (Ruby's `uuid_for_path`); any other length throws an `ArgumentError`. Truncation raises the collision odds, so namespace seeds, e.g. `tool/<target>/<thing>`
+- `XcodeProject.predictabilizeUuids()` replaces every UUID of the project with the MD5 of the structural path of its object, ported from Ruby's `Project#predictabilize_uuids` (the saved file is byte-identical to xcodeproj's on the Flutter iOS and macOS projects). Object references, `containerPortal`, `remoteGlobalIDString` and the `TargetAttributes` keys and `TestTargetID`s are rewritten together, so no UUID is left dangling. Files outside the project that refer to its UUIDs, such as the `BlueprintIdentifier` of a scheme, are not rewritten. `UuidGenerator.structuralPaths` exposes the paths, and `AbstractObject.toManyAttributeKeys` / `referencesByKeysAttributeKeys` the plist keys the paths are made of
 
 ## 0.3.0
 
