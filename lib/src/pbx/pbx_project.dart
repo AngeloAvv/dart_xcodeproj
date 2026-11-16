@@ -391,9 +391,18 @@ class PBXProject extends AbstractObject {
   List<ObjectList<Object>> get toManyAttributes => [targets, packageReferences];
 
   @override
+  List<String> get toManyAttributeKeys => const [
+    _kTargets,
+    _kPackageReferences,
+  ];
+
+  @override
   List<ObjectList<ObjectDictionary>> get referencesByKeysAttributes => [
     projectReferences,
   ];
+
+  @override
+  List<String> get referencesByKeysAttributeKeys => const [_kProjectReferences];
 
   // ---------------------------------------------------------------------------
   // : sort cascade

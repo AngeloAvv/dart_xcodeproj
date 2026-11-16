@@ -32,8 +32,12 @@ class ToOneAttribute {
 /// 4. Each [removeReferrer] drops the referrer; when the last one goes,
 /// the object is removed from [ObjectGraph.objectsByUuid].
 abstract class AbstractObject {
-  /// Stable uppercase hex UUID (24 chars, or 32 once predictabilized) assigned at construction.
-  final String uuid;
+  String _uuid;
+
+  /// Uppercase hex UUID (24 chars, or 32 once predictabilized) assigned at
+  /// construction. It only changes through [assignUuid], i.e. when the project
+  /// is predictabilized.
+  String get uuid => _uuid;
 
   /// The owning project graph. Set at construction and never reassigned.
   final ObjectGraph project;
@@ -42,7 +46,15 @@ abstract class AbstractObject {
   /// Port of @referrers in (Ruby uses Array — we use Set for safety).
   final Set<Object> _referrers = <Object>{};
 
-  AbstractObject(this.project, this.uuid);
+  AbstractObject(this.project, String uuid) : _uuid = uuid;
+
+  /// Replaces this object's UUID.
+  ///
+  /// Not meant to be called directly: it does not re-key
+  /// [ObjectGraph.objectsByUuid], which the caller must rebuild. It exists for
+  /// `XcodeProject.predictabilizeUuids`, the port of the `@uuid` assignment of
+  /// Ruby's `UUIDGenerator#switch_uuids`.
+  void assignUuid(String uuid) => _uuid = uuid;
 
   /// The ISA string for this class.
   /// Each concrete subclass declares `static const String isa = 'PBXFoo'`
@@ -118,6 +130,17 @@ abstract class AbstractObject {
   /// Subclasses override and append to `super`'s.
   /// Port of the `references_by_keys_attributes` descriptors in.
   List<ObjectList<ObjectDictionary>> get referencesByKeysAttributes => const [];
+
+  /// The plist keys of the to-many attributes, i.e. the entries of
+  /// [referenceAttributes] that hold a list of objects (the other entries are
+  /// to-one). Unlike the lists of [toManyAttributes] they carry the key, and
+  /// they are listed even when [toHash] leaves an empty list out.
+  /// Subclasses override and append to `super`'s.
+  List<String> get toManyAttributeKeys => const [];
+
+  /// The plist keys of [referencesByKeysAttributes], in the same order.
+  /// Subclasses override and append to `super`'s.
+  List<String> get referencesByKeysAttributeKeys => const [];
 
   /// Called by [removeFromProject] on each referrer.
   /// Drops every reference to [obj] held by this object: to-one attributes

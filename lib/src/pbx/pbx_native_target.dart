@@ -226,6 +226,13 @@ abstract class AbstractTarget extends AbstractObject {
   ];
 
   @override
+  List<String> get toManyAttributeKeys => [
+    ...super.toManyAttributeKeys,
+    _kBuildPhases,
+    _kDependencies,
+  ];
+
+  @override
   void clearRelationships() {
     buildConfigurationList = null;
     buildPhases.clear();
@@ -598,10 +605,22 @@ class PBXNativeTarget extends AbstractTarget {
 
   @override
   List<ObjectList<Object>> get toManyAttributes => [
-    ...super.toManyAttributes,
-    packageProductDependencies,
-    fileSystemSynchronizedGroups,
     buildRules,
+    packageProductDependencies,
+    buildPhases,
+    fileSystemSynchronizedGroups,
+    dependencies,
+  ];
+
+  // In the order Ruby's PBXNativeTarget declares them (and so follows them):
+  // its own build_phases come before those of AbstractTarget.
+  @override
+  List<String> get toManyAttributeKeys => const [
+    _kBuildRules,
+    _kPackageProductDependencies,
+    AbstractTarget._kBuildPhases,
+    _kFileSystemSynchronizedGroups,
+    AbstractTarget._kDependencies,
   ];
 
   @override
