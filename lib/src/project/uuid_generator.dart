@@ -1,9 +1,21 @@
+import 'dart:collection';
 import 'dart:convert';
+import 'dart:developer' as developer;
 // import only Random to prevent accidental use of Random() (insecure PRNG).
 // UUID generation MUST use Random.secure() exclusively.
 import 'dart:math' show Random;
 
 import 'package:crypto/crypto.dart';
+import 'package:path/path.dart' as p;
+
+import '../object/abstract_object.dart';
+import '../pbx/group.dart';
+import '../pbx/pbx_container_item_proxy.dart';
+import '../pbx/pbx_file_reference.dart';
+import '../pbx/pbx_project.dart';
+import '../pbx/pbx_target_dependency.dart';
+import 'case_converter.dart';
+import 'xcode_project.dart';
 
 /// UUID generation utilities for Xcode project object identifiers.
 /// Xcode uses two UUID formats:
@@ -116,5 +128,313 @@ class UuidGenerator {
     } else {
       return object.toString();
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Predictable UUIDs
+  // ---------------------------------------------------------------------------
+
+  /// Computes the structural path of every object reachable from [root].
+  ///
+  /// The path of an object is where it sits in the project, e.g.
+  /// `Runner.xcodeproj/mainGroup/children/<component>`: [rootPath] for the
+  /// root, then for each reference one segment per attribute (its plist key)
+  /// and, for lists and dictionaries, one segment identifying the element (a
+  /// digest of what the element looks like, see [treeHashToPath], plus its
+  /// group hierarchy for groups and file references). An object reachable in
+  /// several ways keeps the path it was first found with: to-one references
+  /// are followed first, then to-many references, then the dictionaries of
+  /// references, each in the order of [AbstractObject.attributeOrder].
+  ///
+  /// The map is keyed by identity and lists the objects in the order they were
+  /// found, which is the order [predictabilize] resolves UUID collisions in.
+  ///
+  /// Port of the path computation of Ruby's `UUIDGenerator#generate_paths`.
+  static Map<AbstractObject, String> structuralPaths(
+    PBXProject root,
+    String rootPath,
+  ) => _StructuralPaths(root).compute(rootPath);
+
+  /// Replaces every UUID of [project] with the MD5 of the structural path of
+  /// its object (see [structuralPaths]) and rewrites every UUID that is held
+  /// as a plain string, so that no reference is left dangling.
+  ///
+  /// Besides the object UUIDs, the references that are not objects are
+  /// rewritten too: `containerPortal` and `remoteGlobalIDString` of a
+  /// [PBXContainerItemProxy] and, in the project's `TargetAttributes`, the
+  /// target UUID keys and the `TestTargetID` values. A UUID that is not one of
+  /// the project's, such as the `remoteGlobalIDString` of a target of another
+  /// project, is left untouched.
+  ///
+  /// Objects the root cannot reach keep their UUID. If two objects have the
+  /// same path they get the same UUID: the later one found replaces the
+  /// earlier in [XcodeProject.objectsByUuid] and a warning is logged.
+  ///
+  /// Port of Ruby's `UUIDGenerator#generate!`.
+  static void predictabilize(XcodeProject project) {
+    final root = project.rootObject;
+    final paths = structuralPaths(root, p.basename(project.path));
+
+    // Every object, by the UUID it has before it is switched.
+    final objectsByOldUuid = Map<String, AbstractObject>.of(
+      project.objectsByUuid,
+    );
+    final unreachable = objectsByOldUuid.values
+        .where((object) => !paths.containsKey(object))
+        .toList();
+
+    final switched = <String, AbstractObject>{};
+    final overwritten = <AbstractObject>[];
+    paths.forEach((object, path) {
+      final uuid = generateDeterministic(path);
+      object.assignUuid(uuid);
+      final previous = switched[uuid];
+      if (previous != null) overwritten.add(previous);
+      switched[uuid] = object;
+    });
+
+    if (overwritten.isNotEmpty) {
+      developer.log(
+        '[dart_xcodeproj] Generated duplicate UUIDs:\n\n'
+        '${overwritten.map((o) => '${o.isa} -- ${paths[o]}').join('\n')}',
+        name: 'dart_xcodeproj',
+        level: 900,
+      );
+    }
+
+    // The new UUID of the object that had [uuid], else [uuid] itself.
+    String relink(String uuid) => objectsByOldUuid[uuid]?.uuid ?? uuid;
+
+    for (final object in [...paths.keys, ...unreachable]) {
+      if (object is! PBXContainerItemProxy) continue;
+      final portal = object.containerPortal;
+      if (portal != null) object.containerPortal = relink(portal);
+      final remote = object.remoteGlobalIDString;
+      if (remote != null) object.remoteGlobalIDString = relink(remote);
+    }
+
+    final targetAttributes = root.attributes['TargetAttributes'];
+    if (targetAttributes is Map) {
+      root.attributes['TargetAttributes'] = <String, dynamic>{
+        for (final entry in targetAttributes.entries)
+          relink(entry.key.toString()): _relinkTestTarget(entry.value, relink),
+      };
+    }
+
+    // Unreachable objects are not part of Ruby's object graph at all; keep
+    // them rather than silently dropping them from the project.
+    for (final object in unreachable) {
+      switched.putIfAbsent(object.uuid, () => object);
+    }
+    project.objectsByUuid
+      ..clear()
+      ..addAll(switched);
+    project.markDirty();
+  }
+
+  /// [attributes] of a target in `TargetAttributes`, with its `TestTargetID`
+  /// passed through [relink].
+  static dynamic _relinkTestTarget(
+    dynamic attributes,
+    String Function(String uuid) relink,
+  ) {
+    if (attributes is! Map) return attributes;
+    final testTargetId = attributes['TestTargetID'];
+    if (testTargetId is! String) return attributes;
+    return <String, dynamic>{
+      for (final entry in attributes.entries) entry.key.toString(): entry.value,
+      'TestTargetID': relink(testTargetId),
+    };
+  }
+}
+
+/// The traversal behind [UuidGenerator.structuralPaths].
+class _StructuralPaths {
+  /// The maximum depth [UuidGenerator.treeHashToPath] reads of an object's
+  /// tree hash.
+  static const int _treeDepth = 4;
+
+  /// What stands in for a part of a tree hash beyond [_treeDepth]: whatever it
+  /// is, [UuidGenerator.treeHashToPath] prints it as `|`.
+  static const Map<String, dynamic> _cut = <String, dynamic>{};
+
+  final PBXProject _root;
+  final Map<AbstractObject, String> _paths = LinkedHashMap.identity();
+  final Map<AbstractObject, String> _components = HashMap.identity();
+
+  _StructuralPaths(this._root);
+
+  Map<AbstractObject, String> compute(String rootPath) {
+    _visit(_root, rootPath);
+    return _paths;
+  }
+
+  void _visit(AbstractObject object, String path) {
+    // The first path an object is found with is the one it keeps.
+    if (_paths.containsKey(object)) return;
+    _paths[object] = path;
+
+    final toMany = object.toManyAttributeKeys;
+    final references = object.referenceAttributes.toSet();
+    final toOneKeys = [
+      for (final key in object.attributeOrder)
+        if (references.contains(key) && !toMany.contains(key)) key,
+    ];
+
+    if (toOneKeys.isNotEmpty) {
+      final hash = object.toHash();
+      for (final key in toOneKeys) {
+        final target = _resolve(object, hash[key]);
+        if (target != null) _visit(target, '$path/$key');
+      }
+    }
+
+    final lists = object.toManyAttributes;
+    assert(lists.length == toMany.length, '${object.isa}: toMany mismatch');
+    for (var i = 0; i < lists.length; i++) {
+      for (final element in lists[i].whereType<AbstractObject>()) {
+        _visit(element, '$path/${toMany[i]}/${_component(element)}');
+      }
+    }
+
+    final byKeys = object.referencesByKeysAttributes;
+    final byKeysNames = object.referencesByKeysAttributeKeys;
+    assert(byKeys.length == byKeysNames.length, '${object.isa}: refs mismatch');
+    for (var i = 0; i < byKeys.length; i++) {
+      for (final dictionary in byKeys[i]) {
+        for (final entry in dictionary.entries) {
+          final key = CaseConverter.toSnakeCase(entry.key);
+          _visit(
+            entry.value,
+            '$path/${byKeysNames[i]}/k:$key/${_component(entry.value)}',
+          );
+        }
+      }
+    }
+  }
+
+  /// The object [uuid] designates, if any.
+  AbstractObject? _resolve(AbstractObject from, dynamic uuid) =>
+      uuid is String ? from.project.objectsByUuid[uuid] : null;
+
+  /// Identifies [object] among its siblings.
+  String _component(AbstractObject object) =>
+      _components.putIfAbsent(object, () {
+        final component = UuidGenerator.treeHashToPath(
+          _tree(object, _treeDepth),
+          _treeDepth,
+        );
+        return _hasHierarchyPath(object)
+            ? '$component${_hierarchyPath(object) ?? ''}'
+            : component;
+      });
+
+  /// The recursive hash of [object]: its display name, isa and attributes,
+  /// with the objects it references expanded in place, cut at [depth] levels
+  /// (the most [UuidGenerator.treeHashToPath] reads).
+  ///
+  /// Port of Ruby's `to_tree_hash`, which has no cut and would never end on
+  /// the loops a synchronized folder makes (target, folder, exceptions,
+  /// target).
+  Map<String, dynamic> _tree(AbstractObject object, int depth) {
+    // Ruby's PBXTargetDependency#to_tree_hash leaves its target out: that is
+    // what keeps a target from containing itself through its dependencies.
+    if (object is PBXTargetDependency) {
+      final proxy = object.targetProxy;
+      return <String, dynamic>{
+        'displayName': object.displayName,
+        'isa': object.isa,
+        if (proxy != null) 'targetProxy': _node(proxy, depth - 1),
+      };
+    }
+
+    final hash = object.toHash();
+    final toMany = object.toManyAttributeKeys;
+    final references = object.referenceAttributes.toSet();
+    final lists = object.toManyAttributes;
+    final byKeys = object.referencesByKeysAttributes;
+    final byKeysNames = object.referencesByKeysAttributeKeys;
+    final childDepth = depth - 1;
+
+    final tree = <String, dynamic>{
+      'displayName': object.displayName,
+      'isa': object.isa,
+    };
+    for (final key in object.attributeOrder) {
+      final manyIndex = toMany.indexOf(key);
+      final byKeysIndex = byKeysNames.indexOf(key);
+      if (manyIndex >= 0) {
+        tree[key] = childDepth <= 0
+            ? _cut
+            : [
+                for (final element in lists[manyIndex])
+                  if (element is AbstractObject) _node(element, childDepth - 1),
+              ];
+      } else if (byKeysIndex >= 0) {
+        tree[key] = childDepth <= 0
+            ? _cut
+            : [
+                for (final dictionary in byKeys[byKeysIndex])
+                  childDepth - 1 <= 0
+                      ? _cut
+                      : {
+                          for (final entry in dictionary.entries)
+                            entry.key: _node(entry.value, childDepth - 2),
+                        },
+              ];
+      } else if (references.contains(key)) {
+        final target = _resolve(object, hash[key]);
+        if (target != null) tree[key] = _node(target, childDepth);
+      } else if (hash[key] != null && hash[key] != false) {
+        tree[key] = hash[key];
+      }
+    }
+    return tree;
+  }
+
+  /// The tree hash of [object] standing at [depth], or [_cut] past the end.
+  dynamic _node(AbstractObject object, int depth) =>
+      depth <= 0 ? _cut : _tree(object, depth);
+
+  /// Whether Ruby gives [object] a `hierarchy_path`.
+  bool _hasHierarchyPath(Object object) =>
+      object is PBXGroup || object is PBXFileReference;
+
+  /// The names of the groups [object] sits in, from the main group down,
+  /// e.g. `/Runner/AppDelegate.swift`; `null` for the main group.
+  ///
+  /// Port of `GroupableHelper.hierarchy_path`.
+  String? _hierarchyPath(AbstractObject object) {
+    if (identical(object, _root.mainGroup)) return null;
+    final parent = _parent(object);
+    final String? parentPath;
+    if (_hasHierarchyPath(parent)) {
+      parentPath = _hierarchyPath(parent as AbstractObject);
+    } else if (parent is PBXProject) {
+      parentPath = parent.name;
+    } else {
+      parentPath = (parent as AbstractObject).displayName;
+    }
+    return '${parentPath ?? ''}/${object.displayName}';
+  }
+
+  /// The group [object] is in. Like Ruby's `GroupableHelper.parent`, an
+  /// object referenced from several places has the group among them as its
+  /// parent, and a project with none or several groups is inconsistent.
+  Object _parent(AbstractObject object) {
+    var referrers = object.referrers.toList();
+    if (referrers.length > 1) {
+      referrers = referrers.whereType<PBXGroup>().toList();
+    }
+    if (referrers.length != 1) {
+      throw StateError(
+        referrers.isEmpty
+            ? 'Consistency issue: no parent for object `${object.displayName}`'
+            : 'Consistency issue: unexpected multiple parents for object '
+                  '`${object.displayName}`: '
+                  '${referrers.map((r) => r is AbstractObject ? r.displayName : r).join(', ')}',
+      );
+    }
+    return referrers.single;
   }
 }
