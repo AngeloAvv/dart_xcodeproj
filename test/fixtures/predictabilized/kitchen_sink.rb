@@ -96,7 +96,31 @@ Dir.mktmpdir do |tmp|
   project.main_group << folder
   app.file_system_synchronized_groups << folder
 
+  # Build settings that Xcode writes as one space separated string. xcodeproj
+  # saves the array-typed ones as lists, so they are turned back into strings
+  # in the file below; opened again they are strings, which its `to_tree_hash`
+  # (unlike its `to_hash`) leaves alone.
+  string_settings = {
+    'OTHER_LDFLAGS' => '-ObjC -lc++',
+    'HEADER_SEARCH_PATHS' => '$(inherited) /usr/include',
+    'CUSTOM_FLAGS' => 'a b',
+  }
+  app.build_configurations.each do |configuration|
+    string_settings.each do |key, value|
+      configuration.build_settings[key] = value.split
+    end
+  end
+
   project.save
-  FileUtils.cp(File.join(bundle, 'project.pbxproj'),
-               File.join(__dir__, 'kitchen_sink.pbxproj'))
+
+  pbxproj = File.join(bundle, 'project.pbxproj')
+  text = File.read(pbxproj)
+  string_settings.each do |key, value|
+    list = /^(\s*)#{key} = \(\n(?:\s+[^\n]+,\n)+\s+\);\n/
+    text.gsub!(list) { "#{$1}#{key} = \"#{value}\";\n" }
+    abort "#{key} is not a string in the file" unless text.include?("#{key} = \"#{value}\";")
+  end
+  File.write(pbxproj, text)
+
+  FileUtils.cp(pbxproj, File.join(__dir__, 'kitchen_sink.pbxproj'))
 end

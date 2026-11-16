@@ -13,7 +13,7 @@
 			buildPhases = (
 			);
 			dependencies = (
-				183109C4A0C1AAA4B9054DC699AF92FF /* PBXTargetDependency */,
+				0B57AB6F0D0AF0641B1F37996B766FC0 /* PBXTargetDependency */,
 			);
 			name = Aggregate;
 		};
@@ -48,14 +48,14 @@
 /* End PBXBuildRule section */
 
 /* Begin PBXContainerItemProxy section */
-		A1AE6835041E0DE96CA23CA3EAC00D08 /* PBXContainerItemProxy */ = {
+		3BE98AE333F3B45F69140DA334B45D38 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 18C1723432283E0CC55F10A6DCFD9E02 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 71121F68F4BA4D1C0AC0758F5D9E7EA8;
 			remoteInfo = App;
 		};
-		B780FA9E8E52AF83ADE1E3E4E3213765 /* PBXContainerItemProxy */ = {
+		69B1FE88BBE296E4BA5BAFDF4A6DF324 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 18C1723432283E0CC55F10A6DCFD9E02 /* Project object */;
 			proxyType = 1;
@@ -250,7 +250,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				F9C3E4E4620C5A3448E1B463DEFD5338 /* PBXTargetDependency */,
+				A2F2336F745028F8569929B468233719 /* PBXTargetDependency */,
 			);
 			name = AppTests;
 			productName = AppTests;
@@ -359,17 +359,17 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		183109C4A0C1AAA4B9054DC699AF92FF /* PBXTargetDependency */ = {
+		0B57AB6F0D0AF0641B1F37996B766FC0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = App;
 			target = 71121F68F4BA4D1C0AC0758F5D9E7EA8 /* App */;
-			targetProxy = B780FA9E8E52AF83ADE1E3E4E3213765 /* PBXContainerItemProxy */;
+			targetProxy = 3BE98AE333F3B45F69140DA334B45D38 /* PBXContainerItemProxy */;
 		};
-		F9C3E4E4620C5A3448E1B463DEFD5338 /* PBXTargetDependency */ = {
+		A2F2336F745028F8569929B468233719 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = App;
 			target = 71121F68F4BA4D1C0AC0758F5D9E7EA8 /* App */;
-			targetProxy = A1AE6835041E0DE96CA23CA3EAC00D08 /* PBXContainerItemProxy */;
+			targetProxy = 69B1FE88BBE296E4BA5BAFDF4A6DF324 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -392,17 +392,25 @@
 			};
 			name = Release;
 		};
-		10D234DA6597F9BCD97B7A5AD2345575 /* Release */ = {
+		2A4B03D8BB2E9390FCE492AC62BFF02D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CUSTOM_FLAGS = "a b";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/include,
+				);
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				OTHER_LDFLAGS = (
+					"-ObjC",
+					"-lc++",
+				);
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
 			};
-			name = Release;
+			name = Debug;
 		};
 		81D7798B1C7BDD6ABD6972F6EC4D926C /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -473,16 +481,26 @@
 			};
 			name = Debug;
 		};
-		CC8F143FA1AAC6AC7AD8003CB1B9EC88 /* Debug */ = {
+		BD14ED0DA97303AD21076ED4FC59CFF7 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CUSTOM_FLAGS = "a b";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/include,
+				);
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				OTHER_LDFLAGS = (
+					"-ObjC",
+					"-lc++",
+				);
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
 			};
-			name = Debug;
+			name = Release;
 		};
 		D96FC08B317C9629A68537EAC9B14268 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -557,8 +575,8 @@
 		271AD8BCD49DFE155CAE6B881A4E2DC7 /* Build configuration list for PBXNativeTarget "App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				10D234DA6597F9BCD97B7A5AD2345575 /* Release */,
-				CC8F143FA1AAC6AC7AD8003CB1B9EC88 /* Debug */,
+				BD14ED0DA97303AD21076ED4FC59CFF7 /* Release */,
+				2A4B03D8BB2E9390FCE492AC62BFF02D /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
