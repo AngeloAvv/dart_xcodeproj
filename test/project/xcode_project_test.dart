@@ -10,6 +10,9 @@ import 'package:dart_xcodeproj/src/project/uuid_generator.dart';
 import 'package:dart_xcodeproj/src/project/xcode_project.dart';
 import 'package:test/test.dart';
 
+/// A valid 24-char uppercase hex UUID, as a tool would pin for idempotency.
+const _customUuid = 'A1B2C3D4E5F60718293A4B5C';
+
 void main() {
   group('XcodeProject', () {
     setUp(() {
@@ -82,6 +85,15 @@ void main() {
           expect(project.objectsByUuid.containsKey(group.uuid), isFalse);
         },
       );
+
+      test('uses the caller-supplied uuid', () async {
+        final project = await XcodeProject.create('/tmp/MyProject.xcodeproj');
+        final group = project.newObject(
+          (g, u) => PBXGroup(g, u),
+          uuid: _customUuid,
+        );
+        expect(group.uuid, equals(_customUuid));
+      });
     });
 
     // -------------------------------------------------------------------------

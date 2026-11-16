@@ -25,10 +25,10 @@ class MockObjectGraph implements ObjectGraph {
 
   @override
   T newObject<T extends AbstractObject>(
-    T Function(ObjectGraph, String) factory,
-  ) {
-    final uuid = UuidGenerator.generate();
-    final obj = factory(this, uuid);
+    T Function(ObjectGraph, String) factory, {
+    String? uuid,
+  }) {
+    final obj = factory(this, uuid ?? UuidGenerator.generate());
     obj.initializeDefaults();
     return obj;
   }

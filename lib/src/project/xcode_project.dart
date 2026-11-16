@@ -278,10 +278,11 @@ class XcodeProject implements ObjectGraph {
   /// Port of Ruby `project.new_object`.
   @override
   T newObject<T extends AbstractObject>(
-    T Function(ObjectGraph, String) factory,
-  ) {
-    final uuid = generateUuid();
-    final obj = factory(this, uuid);
+    T Function(ObjectGraph, String) factory, {
+    String? uuid,
+  }) {
+    final objectUuid = uuid ?? generateUuid();
+    final obj = factory(this, objectUuid);
     obj.initializeDefaults();
     return obj;
   }
