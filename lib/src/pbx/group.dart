@@ -434,12 +434,17 @@ class PBXGroup extends AbstractObject {
   }
 
   /// The name Ruby's `find_subpath` matches [object] against. Ruby's
-  /// `PBXGroup#display_name` is `nil` for a group with neither name nor path
-  /// (where [PBXGroup.displayName] falls back to `Group`).
+  /// `PBXGroup#display_name` and `PBXFileReference#display_name` are `nil` for
+  /// an object with neither name nor path (where [displayName] falls back to
+  /// `Group` or `FileReference`).
   static String? _lookupName(AbstractObject object) {
     if (object is PBXGroup) {
       return object.name ??
           (object.path != null ? p.basename(object.path!) : null);
+    }
+    if (object is PBXFileReference) {
+      if (object.name != null || object.path != null) return object.displayName;
+      return null;
     }
     return object.displayName;
   }

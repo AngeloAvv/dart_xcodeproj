@@ -43,7 +43,8 @@ versions.
 
 `lookups.pbxproj` adds: two groups named `Dup` (each with a group `Inner` and a
 file `same.swift`), a file and then a group both named `Shadow`, a group
-without name and path, a file without path, a version group, files in the
+without name and path, a group whose only file has neither name nor path
+(also a `nil` `display_name`), a file without path, a version group, files in the
 `SOURCE_ROOT`, `<absolute>` and `SDKROOT` source trees (one of them with the
 same real path as a file in a group), files whose paths have `.`, `..` and
 `//`, a group anchored at `SOURCE_ROOT`, and build files for one file in two
@@ -70,3 +71,8 @@ build phases.
   the file references and variant groups they keep alive, without a parent.
   Dart removes them too (`PBXGroup.removeFromProject`), so the test only
   expects the difference to be those orphans.
+- Known differences that the cases do not cover: Ruby loads only the objects
+  the root reaches, Dart also keeps the unreachable ones (after the others), so
+  a stale file reference can match `referenceForPath` in Dart only; and Ruby
+  raises where an object has no parent while `GroupableHelper.parent` returns
+  `null` (taken as the main group).

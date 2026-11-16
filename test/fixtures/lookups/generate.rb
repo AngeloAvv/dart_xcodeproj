@@ -14,7 +14,7 @@
 # projects in test/fixtures/annotations/ and lookups.pbxproj, a hand-made
 # project (see `build_lookups_input` below) with the shapes Flutter's lack:
 # duplicated names, a name that is both a file and a group, nameless groups,
-# files without a path or with an absolute one, and a version group.
+# files without a path (or name) or with an absolute one, and a version group.
 #
 # Each project is opened from a bundle named `Runner.xcodeproj` in a fresh
 # temporary directory (`<DIR>` in the recorded paths, `<PARENT>` for the
@@ -82,6 +82,9 @@ def build_lookups_input
     nameless_file = project.new(Xcodeproj::Project::Object::PBXFileReference)
     nameless_file.name = 'NoPath'
     main << nameless_file
+    # A group whose only child is a file without name and path: its
+    # display_name is nil, like that of a nameless group.
+    main.new_group('Blank') << project.new(Xcodeproj::Project::Object::PBXFileReference)
 
     # A version group.
     main.new_reference('Model.xcdatamodeld')
@@ -229,6 +232,17 @@ INPUTS.each do |fixture, input|
                args: { 'path' => 'Brand/New', 'create' => true }, after: true) { |_p, r, _t| r.find_subpath('Brand/New', true) }
       add.call("find_subpath/from:#{group.display_name}/missing", 'findSubpath', receiver: group.uuid,
                args: { 'path' => 'Brand/New', 'create' => false }) { |_p, r, _t| r.find_subpath('Brand/New', false) }
+    end
+  end
+
+  if fixture == 'lookups'
+    blank = nil
+    with_project(input) { |project, _tmp| blank = project.main_group.find_subpath('Blank').uuid }
+    ['', '/'].each do |path|
+      [false, true].each do |create|
+        add.call("find_subpath/from:Blank/#{path.inspect}/create=#{create}", 'findSubpath', receiver: blank,
+                 args: { 'path' => path, 'create' => create }, after: true) { |_p, r, _t| r.find_subpath(path, create) }
+      end
     end
   end
 
