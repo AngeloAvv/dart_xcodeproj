@@ -23,15 +23,15 @@
 /* Begin PBXBuildFile section */
 		1C97A76552BC1BB007E19AA0D943CA05 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 317A45017FD8467EAC85C58D30C1182E /* MainMenu.xib */; };
 		4028B6589B73F701BCEFC8A3F7F1E259 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C66F89984465D11CD9BB997C915FB454 /* RunnerTests.swift */; };
-		5055E7C087E867B929E4D253887D0523 /* Foo.h in Headers */ = {isa = PBXBuildFile; fileRef = AA94B65CBF40BFA9501948ABC14EBAD0 /* Foo.h */; };
 		5A5DE994496CC1D2AE22FCAEF7724375 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 27671EA2504844428F1E41586C9C2CF6 /* Assets.xcassets */; };
 		6A7068BD20C169753DD9FDA3CA6F0087 /* Foo.m in Sources */ = {isa = PBXBuildFile; fileRef = CF0E658CB09F6333262E8F60837FC6C1 /* Foo.m */; settings = {COMPILER_FLAGS = "-fobjc-arc -Wall"; }; };
 		6DAEE74E64612EF531CB3E14423A7DB7 /* Dup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19A779CC37656C632B803EE5931AEAE8 /* Dup.swift */; };
 		728A4B0627ABA7D5B91EEEEEC50155EE /* Baz.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4052195E2CF5515DCE532628B65E643C /* Baz.swift */; };
+		77C2D0F35AD88A30FBB7A5422B7E4A3A /* Foo.h in Headers */ = {isa = PBXBuildFile; fileRef = AA94B65CBF40BFA9501948ABC14EBAD0 /* Foo.h */; };
 		846F359487307930014484335096FF2A /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E6C6EFB0725409399E9E3FEDCA4B0BD /* MainFlutterWindow.swift */; settings = {COMPILER_FLAGS = "-O"; }; };
+		85E087495E2FCA4073764FB54221F35B /* Bar.HPP in Headers */ = {isa = PBXBuildFile; fileRef = 980855BB87495B7B469AA268D37697CA /* Bar.HPP */; };
 		8A4CD8E9FE931C2AA1B0BA4462C4F34F /* GeneratedPluginRegistrant.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D5C0867CF37CEFD95DE000B4E5E38BE /* GeneratedPluginRegistrant.swift */; };
 		CA9A293F495A7AECDAEAF4DB501206FA /* Baz.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4052195E2CF5515DCE532628B65E643C /* Baz.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc -DX"; }; };
-		D2EA1E8897D7AF3DDE6019E47447C594 /* Bar.HPP in Headers */ = {isa = PBXBuildFile; fileRef = 9A629CB45018E65BAABE2770170A3184 /* Bar.HPP */; };
 		E13D73C7A3E96DBC25B4A38FC7D85A88 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4519A72B1CD2F89A4658E9BD14EA9C4D /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
@@ -77,7 +77,7 @@
 		766A32787FFAD82DD144D3F5A37953E7 /* Warnings.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Warnings.xcconfig; sourceTree = "<group>"; };
 		81F380CD32CC6E6AA4ABC8C5DA9DEB1F /* fx.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = fx.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		94235B72BCC446C4A936B6167923C6E2 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		9A629CB45018E65BAABE2770170A3184 /* Bar.HPP */ = {isa = PBXFileReference; includeInIndex = 1; name = Bar.HPP; path = Runner/Bar.HPP; sourceTree = "<group>"; };
+		980855BB87495B7B469AA268D37697CA /* Bar.HPP */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.cpp.h; name = Bar.HPP; path = Runner/Bar.HPP; sourceTree = "<group>"; };
 		9AEF5CD309F9538CA489012C8E072549 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = Runner/Info.plist; sourceTree = "<group>"; };
 		AA94B65CBF40BFA9501948ABC14EBAD0 /* Foo.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = Foo.h; path = Runner/Foo.h; sourceTree = "<group>"; };
 		BC7631269CC432728AE7957DAF7C3CD2 /* Flutter-Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Debug.xcconfig"; sourceTree = "<group>"; };
@@ -178,7 +178,7 @@
 				6B0146956FB6DE04429E0B2034BC82C8 /* Frameworks */,
 				CF0E658CB09F6333262E8F60837FC6C1 /* Foo.m */,
 				AA94B65CBF40BFA9501948ABC14EBAD0 /* Foo.h */,
-				9A629CB45018E65BAABE2770170A3184 /* Bar.HPP */,
+				980855BB87495B7B469AA268D37697CA /* Bar.HPP */,
 				4052195E2CF5515DCE532628B65E643C /* Baz.swift */,
 				19A779CC37656C632B803EE5931AEAE8 /* Dup.swift */,
 			);
@@ -198,12 +198,12 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
-		3EB2EF6A757E8D46BD2CA26D1CAAD2C5 /* Headers */ = {
+		D0F24B20CC83C3470DA1109599D78605 /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5055E7C087E867B929E4D253887D0523 /* Foo.h in Headers */,
-				D2EA1E8897D7AF3DDE6019E47447C594 /* Bar.HPP in Headers */,
+				77C2D0F35AD88A30FBB7A5422B7E4A3A /* Foo.h in Headers */,
+				85E087495E2FCA4073764FB54221F35B /* Bar.HPP in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -251,7 +251,7 @@
 				D172A772FF87079C89B7EB3BDC855850 /* Resources */,
 				245C2BCC49881FD92CA11CAC4ADA4A4C /* Bundle Framework */,
 				6C54F44975A8B8E463B6EE46E4DF3FCC /* ShellScript */,
-				3EB2EF6A757E8D46BD2CA26D1CAAD2C5 /* Headers */,
+				D0F24B20CC83C3470DA1109599D78605 /* Headers */,
 			);
 			buildRules = (
 			);

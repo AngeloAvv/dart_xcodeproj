@@ -17,10 +17,10 @@
 		8272BAC73F08D8C63686CBAC678A565E /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C66F89984465D11CD9BB997C915FB454 /* RunnerTests.swift */; };
 		88F2DDA13EA37101C7B6AB906558A49E /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6E103C9D61BD42C0BFB591E299BB0BF3 /* LaunchScreen.storyboard */; };
 		9FC035AD99807A501466AC3D4EBB8D35 /* Baz.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4052195E2CF5515DCE532628B65E643C /* Baz.swift */; settings = {COMPILER_FLAGS = "-fobjc-arc -DX"; }; };
+		AD4BB6AFC28E8E05AEA6BDBD9BC4C50B /* Foo.h in Headers */ = {isa = PBXBuildFile; fileRef = AA94B65CBF40BFA9501948ABC14EBAD0 /* Foo.h */; };
 		B012E2525AFAE3A48245B215E3D5B711 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AD8EFCBBCBD1559002CF5FB0BE433D /* AppDelegate.swift */; settings = {COMPILER_FLAGS = "-O"; }; };
 		B1FDBA58EC855EEE53F7EB55AF54FFFB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 49F3B682975716E752A8B7C523D367DC /* Assets.xcassets */; };
-		BC16218466AC74E9E79C0EFF8195F9E4 /* Bar.HPP in Headers */ = {isa = PBXBuildFile; fileRef = 9A629CB45018E65BAABE2770170A3184 /* Bar.HPP */; };
-		DA9181F20D4686311CC00CF1646DF85B /* Foo.h in Headers */ = {isa = PBXBuildFile; fileRef = AA94B65CBF40BFA9501948ABC14EBAD0 /* Foo.h */; };
+		EB71CB92F3C651AECEEE44EAF9F2133E /* Bar.HPP in Headers */ = {isa = PBXBuildFile; fileRef = 980855BB87495B7B469AA268D37697CA /* Bar.HPP */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,7 +60,7 @@
 		72AD8EFCBBCBD1559002CF5FB0BE433D /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		7A6206CCA3E5F2B2ECB0CDA7B27DDB33 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
 		8CE9C5B9157BF8FCE40ACE3051EC905E /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		9A629CB45018E65BAABE2770170A3184 /* Bar.HPP */ = {isa = PBXFileReference; includeInIndex = 1; name = Bar.HPP; path = Runner/Bar.HPP; sourceTree = "<group>"; };
+		980855BB87495B7B469AA268D37697CA /* Bar.HPP */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.cpp.h; name = Bar.HPP; path = Runner/Bar.HPP; sourceTree = "<group>"; };
 		AA94B65CBF40BFA9501948ABC14EBAD0 /* Foo.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = Foo.h; path = Runner/Foo.h; sourceTree = "<group>"; };
 		C66F89984465D11CD9BB997C915FB454 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		CEA3631A888D939611C2621277094299 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -123,7 +123,7 @@
 				548E2E8811056B272290B22F37F75A03 /* RunnerTests */,
 				CF0E658CB09F6333262E8F60837FC6C1 /* Foo.m */,
 				AA94B65CBF40BFA9501948ABC14EBAD0 /* Foo.h */,
-				9A629CB45018E65BAABE2770170A3184 /* Bar.HPP */,
+				980855BB87495B7B469AA268D37697CA /* Bar.HPP */,
 				4052195E2CF5515DCE532628B65E643C /* Baz.swift */,
 				19A779CC37656C632B803EE5931AEAE8 /* Dup.swift */,
 			);
@@ -143,12 +143,12 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
-		24D8E95D3BFEBAA33C3C0223CA89FB66 /* Headers */ = {
+		01F7A00B70C47FAB75A7467328021162 /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DA9181F20D4686311CC00CF1646DF85B /* Foo.h in Headers */,
-				BC16218466AC74E9E79C0EFF8195F9E4 /* Bar.HPP in Headers */,
+				AD4BB6AFC28E8E05AEA6BDBD9BC4C50B /* Foo.h in Headers */,
+				EB71CB92F3C651AECEEE44EAF9F2133E /* Bar.HPP in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -179,7 +179,7 @@
 				FB9E6AF3CF2EF04D30569704CF5ED4E0 /* Resources */,
 				F85E4BB7682E212D01A8147491BE2718 /* Embed Frameworks */,
 				6BE8391B3207C581291D2E29DC0D2F91 /* Thin Binary */,
-				24D8E95D3BFEBAA33C3C0223CA89FB66 /* Headers */,
+				01F7A00B70C47FAB75A7467328021162 /* Headers */,
 			);
 			buildRules = (
 			);

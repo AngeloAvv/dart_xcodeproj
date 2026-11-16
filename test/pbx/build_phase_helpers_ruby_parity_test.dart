@@ -9,6 +9,7 @@
 
 import 'dart:io';
 
+import 'package:dart_xcodeproj/src/pbx/pbx_file_reference.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_native_target.dart';
 import 'package:dart_xcodeproj/src/project/xcode_project.dart';
 import 'package:test/test.dart';
@@ -32,6 +33,32 @@ final Map<String, void Function(XcodeProject)> _scenarios = {
     bare.headersBuildPhase;
     bare.sourceBuildPhase;
     _runner(project).headersBuildPhase;
+  },
+  'add_file_references': (project) {
+    final target = _runner(project);
+    final fooM = project.newFile('Runner/Foo.m');
+    final fooH = project.newFile('Runner/Foo.h');
+    final upper = project.newFile('Runner/Bar.HPP');
+    // Ruby finds no file type for `HPP` (case sensitive), `newFile` does.
+    upper.lastKnownFileType = 'sourcecode.cpp.h';
+    final swift = project.newFile('Runner/Baz.swift');
+    final dup = project.newFile('Runner/Dup.swift');
+    target.addFileReferences([
+      fooM,
+      fooH,
+      upper,
+      swift,
+    ], compilerFlags: '-fobjc-arc');
+    target.addFileReferences([fooM], compilerFlags: '-Wall');
+    target.addFileReferences([fooM, swift]);
+    target.addFileReferences([swift], compilerFlags: '-DX');
+    target.addFileReferences([dup, dup], compilerFlags: '');
+    target.addFileReferences([]);
+    final existing =
+        target.sourceBuildPhase.files.first.fileRef! as PBXFileReference;
+    target.addFileReferences([existing], compilerFlags: '-O');
+    target.addFileReferences([fooH], compilerFlags: '-fobjc-arc');
+    bareTarget(project).addFileReferences([swift]);
   },
   'add_resources': (project) {
     final target = _runner(project);

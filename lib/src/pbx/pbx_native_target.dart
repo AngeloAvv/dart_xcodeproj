@@ -2,8 +2,10 @@ import '../constants/misc.dart';
 import '../object/abstract_object.dart';
 import '../object/object_graph.dart';
 import '../object/object_list.dart';
+import 'pbx_build_file.dart';
 import 'pbx_build_phase.dart';
 import 'pbx_container_item_proxy.dart';
+import 'pbx_file_reference.dart';
 import 'pbx_target_dependency.dart';
 import 'xc_configuration_list.dart';
 import 'xc_swift_package_product_dependency.dart';
@@ -741,6 +743,65 @@ class PBXNativeTarget extends AbstractTarget {
   PBXHeadersBuildPhase get headersBuildPhase =>
       _findOrCreateBuildPhase((g, u) => PBXHeadersBuildPhase(g, u));
 
+  /// Adds [fileReferences] to the target and returns the build file of each,
+  /// in the same order.
+  ///
+  /// A file whose extension is one of [MiscConstants.headerFilesExtensions]
+  /// (compared in lower case, so `.HPP` is a header) goes to the
+  /// [headersBuildPhase], any other to the [sourceBuildPhase]; the phase is
+  /// created when the target has none, but only when there is a file to add.
+  /// A file that already has a build file in its phase is not added again: the
+  /// existing build file is returned (so a reference given twice yields the
+  /// same build file twice).
+  ///
+  /// A non-empty [compilerFlags] is stored as the `COMPILER_FLAGS` setting of
+  /// the build file of each source file (headers have none), appended after a
+  /// space to the flags the build file already has, even when they are the
+  /// same, the other settings being kept. [onBuildFile] is called with the
+  /// build file of each reference, a new or an existing one.
+  ///
+  /// Throws an [ArgumentError], before changing anything, when a reference has
+  /// no `path` (Ruby raises a `TypeError` midway).
+  /// Port of `PBXNativeTarget#add_file_references`. [compilerFlags] is the
+  /// second argument there, and [onBuildFile] its block.
+  List<PBXBuildFile> addFileReferences(
+    Iterable<PBXFileReference> fileReferences, {
+    String? compilerFlags,
+    void Function(PBXBuildFile buildFile)? onBuildFile,
+  }) {
+    final files = fileReferences.toList();
+    for (final file in files) {
+      if (file.path == null) {
+        throw ArgumentError.value(
+          file,
+          'fileReferences',
+          'a file reference without a path cannot be added to a build phase',
+        );
+      }
+    }
+
+    final buildFiles = <PBXBuildFile>[];
+    for (final file in files) {
+      final isHeader = MiscConstants.headerFilesExtensions.contains(
+        _extname(file.path!).toLowerCase(),
+      );
+      final phase = isHeader ? headersBuildPhase : sourceBuildPhase;
+      final buildFile = phase.addFileReference(file, avoidDuplicates: true);
+
+      if (compilerFlags != null && compilerFlags.isNotEmpty && !isHeader) {
+        final settings = buildFile.settings ??= <String, dynamic>{};
+        final old = settings['COMPILER_FLAGS'];
+        settings['COMPILER_FLAGS'] = old == null
+            ? compilerFlags
+            : '$old $compilerFlags';
+      }
+
+      onBuildFile?.call(buildFile);
+      buildFiles.add(buildFile);
+    }
+    return buildFiles;
+  }
+
   /// Adds [resourceFileReferences] to the [resourcesBuildPhase] of the target.
   ///
   /// A reference that already has a build file in the phase is skipped (also
@@ -919,4 +980,15 @@ class PBXLegacyTarget extends AbstractTarget {
         super.readAttribute(key, value, objectsByUuidPlist);
     }
   }
+}
+
+/// The extension of [path], with its leading dot, like Ruby's `File.extname`:
+/// a leading dot of the basename does not start an extension (`.h` has none),
+/// a trailing one is one (`foo.` gives `.`).
+String _extname(String path) {
+  final trimmed = path.replaceFirst(RegExp(r'/+$'), '');
+  final base = trimmed.substring(trimmed.lastIndexOf('/') + 1);
+  final name = base.replaceFirst(RegExp(r'^\.+'), '');
+  final dot = name.lastIndexOf('.');
+  return dot < 0 ? '' : name.substring(dot);
 }

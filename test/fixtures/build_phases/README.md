@@ -44,3 +44,8 @@ project.save
 
 The Dart parity test mirrors each scenario call for call: change one and
 change the other.
+
+`add_file_references` sets the `lastKnownFileType` of `Bar.HPP` by hand on both
+sides: Ruby looks the extension up as it is (`HPP`) and finds no file type,
+where Dart's `XcodeProject.newFile` lowercases it first. That difference lives
+in the creation of file references, not in the helpers under test.

@@ -62,6 +62,9 @@ SCENARIOS = {
     foo_m = project.new_file('Runner/Foo.m')
     foo_h = project.new_file('Runner/Foo.h')
     upper = project.new_file('Runner/Bar.HPP')
+    # Ruby looks the extension up as it is (`HPP`), and finds no file type,
+    # where Dart's `newFile` lowercases it first: not what is under test here.
+    upper.last_known_file_type = 'sourcecode.cpp.h'
     swift = project.new_file('Runner/Baz.swift')
     dup = project.new_file('Runner/Dup.swift')
     target.add_file_references([foo_m, foo_h, upper, swift], '-fobjc-arc')

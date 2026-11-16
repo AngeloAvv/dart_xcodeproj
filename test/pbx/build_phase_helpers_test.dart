@@ -4,6 +4,8 @@
 // Ruby lives in build_phase_helpers_ruby_parity_test.dart.
 
 import 'package:dart_xcodeproj/src/pbx/pbx_build_phase.dart';
+import 'package:dart_xcodeproj/src/pbx/pbx_build_file.dart';
+import 'package:dart_xcodeproj/src/pbx/pbx_file_reference.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_native_target.dart';
 import 'package:dart_xcodeproj/src/project/xcode_project.dart';
 import 'package:test/test.dart';
@@ -65,6 +67,202 @@ void main() {
 
           expect(bare.buildPhases.toList(), [phase]);
           expect(bare.resourcesBuildPhase, same(phase));
+        });
+      });
+
+      group('addFileReferences', () {
+        test(
+          'adds a source file to the sources phase and returns its build file',
+          () {
+            final swift = project.newFile('Runner/Baz.swift');
+            final phase = runner.sourceBuildPhase;
+
+            final buildFiles = runner.addFileReferences([swift]);
+
+            expect(buildFiles, hasLength(1));
+            expect(buildFiles.single.fileRef, same(swift));
+            expect(phase.files.last, same(buildFiles.single));
+          },
+        );
+
+        test('returns the build files in the order of the references', () {
+          final a = project.newFile('Runner/A.m');
+          final b = project.newFile('Runner/B.swift');
+
+          final buildFiles = runner.addFileReferences([b, a]);
+
+          expect(buildFiles.map((f) => f.fileRef), [b, a]);
+        });
+
+        test('adds headers to the headers phase, whatever the case', () {
+          final lower = project.newFile('Runner/Foo.h');
+          final upper = project.newFile('Runner/Bar.HPP');
+          final sources = runner.sourceBuildPhase.files.length;
+
+          final buildFiles = runner.addFileReferences([lower, upper]);
+
+          expect(runner.headersBuildPhase.files.toList(), buildFiles);
+          expect(runner.sourceBuildPhase.files, hasLength(sources));
+        });
+
+        test('treats a file without extension as a source', () {
+          final ref = project.newFile('Runner/Makefile');
+
+          final buildFile = runner.addFileReferences([ref]).single;
+
+          expect(runner.sourceBuildPhase.files, contains(buildFile));
+        });
+
+        test('reuses the build file a reference already has in the phase', () {
+          final existing = runner.sourceBuildPhase.files.first;
+          final count = runner.sourceBuildPhase.files.length;
+
+          final buildFiles = runner.addFileReferences([
+            existing.fileRef! as PBXFileReference,
+          ]);
+
+          expect(buildFiles.single, same(existing));
+          expect(runner.sourceBuildPhase.files, hasLength(count));
+        });
+
+        test('reuses the build file for a reference given twice', () {
+          final ref = project.newFile('Runner/Dup.swift');
+
+          final buildFiles = runner.addFileReferences([ref, ref]);
+
+          expect(buildFiles.first, same(buildFiles.last));
+          expect(
+            runner.sourceBuildPhase.files.where((f) => f.fileRef == ref),
+            hasLength(1),
+          );
+        });
+
+        test(
+          'adds a file to a phase that has a build file of another phase',
+          () {
+            final ref = project.newFile('Runner/Shared.m');
+            runner.addResources([ref]);
+
+            final buildFile = runner.addFileReferences([ref]).single;
+
+            expect(runner.sourceBuildPhase.files, contains(buildFile));
+            expect(
+              runner.resourcesBuildPhase.files,
+              isNot(contains(buildFile)),
+            );
+          },
+        );
+
+        test('sets the compiler flags of a source file', () {
+          final ref = project.newFile('Runner/Foo.m');
+
+          final buildFile = runner.addFileReferences([
+            ref,
+          ], compilerFlags: '-fobjc-arc').single;
+
+          expect(buildFile.settings, {'COMPILER_FLAGS': '-fobjc-arc'});
+        });
+
+        test('appends the flags to those the build file already has', () {
+          final ref = project.newFile('Runner/Foo.m');
+          runner.addFileReferences([ref], compilerFlags: '-fobjc-arc');
+
+          final buildFile = runner.addFileReferences([
+            ref,
+          ], compilerFlags: '-Wall').single;
+
+          expect(buildFile.settings, {'COMPILER_FLAGS': '-fobjc-arc -Wall'});
+        });
+
+        test('appends the same flags again, like Ruby', () {
+          final ref = project.newFile('Runner/Foo.m');
+          runner.addFileReferences([ref], compilerFlags: '-fobjc-arc');
+
+          final buildFile = runner.addFileReferences([
+            ref,
+          ], compilerFlags: '-fobjc-arc').single;
+
+          expect(buildFile.settings, {
+            'COMPILER_FLAGS': '-fobjc-arc -fobjc-arc',
+          });
+        });
+
+        test('keeps the other settings of an existing build file', () {
+          final ref = project.newFile('Runner/Foo.m');
+          runner.addFileReferences([ref]).single.settings = {
+            'ATTRIBUTES': ['Public'],
+          };
+
+          final buildFile = runner.addFileReferences([
+            ref,
+          ], compilerFlags: '-Wall').single;
+
+          expect(buildFile.settings, {
+            'ATTRIBUTES': ['Public'],
+            'COMPILER_FLAGS': '-Wall',
+          });
+        });
+
+        test('leaves the settings alone without compiler flags', () {
+          final a = project.newFile('Runner/A.m');
+          final b = project.newFile('Runner/B.m');
+
+          expect(runner.addFileReferences([a]).single.settings, isNull);
+          expect(
+            runner.addFileReferences([b], compilerFlags: '').single.settings,
+            isNull,
+          );
+        });
+
+        test('ignores the compiler flags of a header', () {
+          final header = project.newFile('Runner/Foo.h');
+
+          final buildFile = runner.addFileReferences([
+            header,
+          ], compilerFlags: '-fobjc-arc').single;
+
+          expect(buildFile.settings, isNull);
+        });
+
+        test('calls back with the build file of each reference', () {
+          final existing = runner.sourceBuildPhase.files.first;
+          final fresh = project.newFile('Runner/Foo.m');
+          final seen = <PBXBuildFile>[];
+
+          final buildFiles = runner.addFileReferences([
+            existing.fileRef! as PBXFileReference,
+            fresh,
+          ], onBuildFile: seen.add);
+
+          expect(seen, buildFiles);
+          expect(seen.first, same(existing));
+        });
+
+        test('throws, and adds nothing, for a reference without a path', () {
+          final ok = project.newFile('Runner/Foo.m');
+          final pathless = project.newObject((g, u) => PBXFileReference(g, u));
+          final before = runner.sourceBuildPhase.files.length;
+
+          expect(
+            () => runner.addFileReferences([ok, pathless]),
+            throwsArgumentError,
+          );
+          expect(runner.sourceBuildPhase.files, hasLength(before));
+        });
+
+        test('does nothing, not even creating a phase, for no references', () {
+          final bare = bareTarget(project);
+
+          expect(bare.addFileReferences([]), isEmpty);
+          expect(bare.buildPhases, isEmpty);
+        });
+
+        test('creates the sources phase when the target has none', () {
+          final bare = bareTarget(project);
+
+          bare.addFileReferences([project.newFile('Runner/Baz.swift')]);
+
+          expect(bare.buildPhases.single, isA<PBXSourcesBuildPhase>());
         });
       });
 
