@@ -14,6 +14,9 @@ import 'remote_runnable.dart';
 class LaunchAction extends AbstractSchemeAction {
   static const String _tag = 'LaunchAction';
 
+  /// Wraps [el], or creates a default `<LaunchAction>` when [el] is omitted (`Debug`).
+  ///
+  /// Throws an [ArgumentError] if [el] is not a `<LaunchAction>` element.
   LaunchAction([XmlElement? el]) {
     createXmlElementWithFallback(el, _tag, () {
       buildConfiguration = 'Debug';
@@ -41,22 +44,34 @@ class LaunchAction extends AbstractSchemeAction {
   // Attributes
   // ---------------------------------------------------------------------------
 
+  /// Whether GPS location simulation is allowed when launching.
+  ///
+  /// A missing attribute reads as `false`.
   bool get allowLocationSimulation =>
       stringToBool(xmlElement.getAttribute('allowLocationSimulation') ?? 'NO');
   set allowLocationSimulation(bool v) =>
       xmlElement.setAttribute('allowLocationSimulation', boolToString(v));
 
+  /// Whether the launch uses a custom working directory.
+  ///
+  /// A missing attribute reads as `false`.
   bool get useCustomWorkingDirectory => stringToBool(
     xmlElement.getAttribute('useCustomWorkingDirectory') ?? 'NO',
   );
   set useCustomWorkingDirectory(bool v) =>
       xmlElement.setAttribute('useCustomWorkingDirectory', boolToString(v));
 
+  /// Whether document versioning is enabled while debugging.
+  ///
+  /// A missing attribute reads as `false`.
   bool get debugDocumentVersioning =>
       stringToBool(xmlElement.getAttribute('debugDocumentVersioning') ?? 'NO');
   set debugDocumentVersioning(bool v) =>
       xmlElement.setAttribute('debugDocumentVersioning', boolToString(v));
 
+  /// The `launchStyle` attribute (`0` automatic, `1` wait for executable).
+  ///
+  /// Setting `null` removes the attribute.
   String? get launchStyle => xmlElement.getAttribute('launchStyle');
   set launchStyle(String? v) {
     if (v == null) {
@@ -97,6 +112,7 @@ class LaunchAction extends AbstractSchemeAction {
   // EnvironmentVariables
   // ---------------------------------------------------------------------------
 
+  /// The [EnvironmentVariables] defined at launch, or `null` if there are none.
   EnvironmentVariables? get environmentVariables {
     final el = xmlElement.findElements('EnvironmentVariables').firstOrNull;
     return el != null ? EnvironmentVariables(el) : null;
@@ -113,6 +129,7 @@ class LaunchAction extends AbstractSchemeAction {
   // CommandLineArguments
   // ---------------------------------------------------------------------------
 
+  /// The [CommandLineArguments] passed at launch, or `null` if there are none.
   CommandLineArguments? get commandLineArguments {
     final el = xmlElement.findElements('CommandLineArguments').firstOrNull;
     return el != null ? CommandLineArguments(el) : null;
@@ -129,6 +146,7 @@ class LaunchAction extends AbstractSchemeAction {
   // LocationScenarioReference
   // ---------------------------------------------------------------------------
 
+  /// The [LocationScenarioReference] that simulates a location, or `null`.
   LocationScenarioReference? get locationScenarioReference {
     final el = xmlElement.findElements('LocationScenarioReference').firstOrNull;
     return el != null ? LocationScenarioReference(el) : null;
@@ -145,11 +163,13 @@ class LaunchAction extends AbstractSchemeAction {
   // MacroExpansion
   // ---------------------------------------------------------------------------
 
+  /// The [MacroExpansion]s of this launch action.
   List<MacroExpansion> get macroExpansions => xmlElement
       .findElements('MacroExpansion')
       .map(MacroExpansion.new)
       .toList();
 
+  /// Appends a copy of [me] to this launch action.
   void addMacroExpansion(MacroExpansion me) {
     xmlElement.children.add(me.xmlElement.copy());
   }
