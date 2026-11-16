@@ -147,6 +147,24 @@ void main() {
         });
       });
 
+      test(
+        'generateUuid never hands out a supplied uuid that is not wired yet',
+        () async {
+          const draws = 400;
+          final project = await XcodeProject.create('/tmp/MyProject.xcodeproj');
+
+          // The first candidate the injected RNG will produce.
+          final reserved = UuidGenerator.generate(random: Random(42));
+          project.uuidRandom = Random(42);
+          project.newObject((g, u) => PBXGroup(g, u), uuid: reserved);
+
+          final generated = [
+            for (var i = 0; i < draws; i++) project.generateUuid(),
+          ];
+          expect(generated, isNot(contains(reserved)));
+        },
+      );
+
       test('accepts a valid 32-char (deterministic) uuid', () async {
         final project = await XcodeProject.create('/tmp/MyProject.xcodeproj');
         final uuid = UuidGenerator.generateDeterministic('some/structural/path');

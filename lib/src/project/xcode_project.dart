@@ -298,6 +298,12 @@ class XcodeProject implements ObjectGraph {
         );
       }
     }
+    if (uuid != null) {
+      // The object is not in [objectsByUuid] until it is wired, so reserve the
+      // UUID to keep [generateUuid] from handing it out in the meantime.
+      _availableUuids.remove(uuid);
+      if (!_generatedUuids.contains(uuid)) _generatedUuids.add(uuid);
+    }
     final objectUuid = uuid ?? generateUuid();
     final obj = factory(this, objectUuid);
     obj.initializeDefaults();
