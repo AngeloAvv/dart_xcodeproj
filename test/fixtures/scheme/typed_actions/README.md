@@ -1,0 +1,58 @@
+# Typed scheme action fixtures
+
+Expected output of Ruby's `XCScheme` typed action getters and setters, used by
+`test/scheme/xc_scheme_typed_actions_test.dart`. Everything that ends in
+`expected.json` or `.ruby_saved.xcscheme` was produced by the Ruby reference
+implementation, never by Dart.
+
+## Inputs
+
+| Scheme | From |
+|--------|------|
+| `ios_Runner`, `macos_Runner` | `test/fixtures/scheme/flutter/`: the schemes `flutter create` writes (the iOS one has the `PreActions` script of Flutter's Swift Package Manager support) |
+| `missing_actions.xcscheme` | the iOS scheme with only `BuildAction` and `LaunchAction` |
+| `repeated_actions.xcscheme` | the iOS scheme with a second `LaunchAction` (`buildConfiguration = "Debug-second"`) after the first |
+| `pre_post_actions.xcscheme` | hand written: `PostActions` on the test and archive actions, `PreActions` on the launch (shell script) and profile (send email) actions, unknown children (`AdditionalOptions`), flavored build configurations, `NO` flags and a `customArchiveName` |
+
+## Regenerating
+
+From the repository root:
+
+```sh
+ruby test/fixtures/scheme/typed_actions/generate.rb
+```
+
+The script pins the `xcodeproj` gem to **1.27.0** (`gem 'xcodeproj', '1.27.0'`).
+Gem **1.28.1** writes the very same files (checked by running the script with
+it): `lib/xcodeproj/scheme.rb` and `lib/xcodeproj/scheme/*.rb` are identical in
+both versions. For each input scheme it does:
+
+```ruby
+scheme = Xcodeproj::XCScheme.new(path)
+scheme.build_action   # .test_action, .launch_action, .profile_action,
+                      # .analyze_action, .archive_action: dumped to expected.json
+File.write('<name>.read_only.ruby_saved.xcscheme', scheme.to_s)
+
+scheme = Xcodeproj::XCScheme.new(path)
+scheme.launch_action.build_configuration = 'Debug-dev'
+File.write('<name>.build_configuration.ruby_saved.xcscheme', scheme.to_s)
+
+scheme = Xcodeproj::XCScheme.new(path)
+scheme.launch_action = LaunchAction.new   # with build_configuration = 'Custom'
+File.write('<name>.replaced_launch.ruby_saved.xcscheme', scheme.to_s)
+
+scheme = Xcodeproj::XCScheme.new(path)
+scheme.analyze_action = AnalyzeAction.new # with build_configuration = 'Custom'
+File.write('<name>.replaced_analyze.ruby_saved.xcscheme', scheme.to_s)
+```
+
+## What the expectations say about Ruby
+
+- A scheme that lacks an action gets a default one from the getter, and the
+  element is **not** in the document afterwards (`inDocumentAfter: false`), so
+  `to_s` does not write it.
+- `pre_actions`/`post_actions` are `nil` when there is no `PreActions` /
+  `PostActions` container (Dart answers an empty list).
+- A boolean attribute that is absent makes the reader raise
+  (`"raises"` in `expected.json`; Dart answers `false`).
+- A repeated action element is not an error: the getter uses the first one.
