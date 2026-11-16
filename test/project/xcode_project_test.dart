@@ -1,6 +1,7 @@
 // — unit tests for XcodeProject accessors and newObject.
 // TDD RED phase: these tests are written BEFORE the implementation.
 
+import 'dart:io';
 import 'dart:math' show Random;
 
 import 'package:dart_xcodeproj/src/object/isa_registry.dart';
@@ -103,10 +104,7 @@ void main() {
           final takenUuid = existing.uuid;
 
           expect(
-            () => project.newObject(
-              (g, u) => PBXGroup(g, u),
-              uuid: takenUuid,
-            ),
+            () => project.newObject((g, u) => PBXGroup(g, u), uuid: takenUuid),
             throwsA(
               isA<ArgumentError>().having(
                 (e) => e.toString(),
@@ -165,9 +163,45 @@ void main() {
         },
       );
 
+      test(
+        'registers once wired, rejects reuse, and survives a save + open',
+        () async {
+          final tmp = Directory.systemTemp.createTempSync('xcodeproj_uuid_');
+          addTearDown(() => tmp.deleteSync(recursive: true));
+          final project = await XcodeProject.create(
+            '${tmp.path}/MyProject.xcodeproj',
+          );
+
+          final group = project.newObject(
+            (g, u) => PBXGroup(g, u),
+            uuid: _customUuid,
+          )..name = 'Pinned';
+          project.mainGroup.children.add(group);
+
+          expect(project.objectsByUuid[_customUuid], same(group));
+          expect(
+            () =>
+                project.newObject((g, u) => PBXGroup(g, u), uuid: _customUuid),
+            throwsA(isA<ArgumentError>()),
+          );
+          expect(project.objectsByUuid[_customUuid], same(group));
+
+          await project.save();
+          final reopened = await XcodeProject.open(
+            '${tmp.path}/MyProject.xcodeproj',
+          );
+          final restored = reopened.objectsByUuid[_customUuid];
+          expect(restored, isA<PBXGroup>());
+          expect((restored! as PBXGroup).name, equals('Pinned'));
+          expect(reopened.mainGroup.children.uuids, contains(_customUuid));
+        },
+      );
+
       test('accepts a valid 32-char (deterministic) uuid', () async {
         final project = await XcodeProject.create('/tmp/MyProject.xcodeproj');
-        final uuid = UuidGenerator.generateDeterministic('some/structural/path');
+        final uuid = UuidGenerator.generateDeterministic(
+          'some/structural/path',
+        );
         final group = project.newObject((g, u) => PBXGroup(g, u), uuid: uuid);
         expect(group.uuid, equals(uuid));
       });

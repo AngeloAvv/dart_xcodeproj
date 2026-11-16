@@ -11,6 +11,7 @@
 
 - `AbstractObject.toAsciiPlist()` / `toAsciiPlistHash()` and the `AnnotatedString` / `AnnotatedDictionary` plist nodes, which `AsciiPlistWriter` prints annotations from. `AbstractObject.asciiPlistAnnotation` is now `String?`: `null` (no annotation) for the main group. `AsciiPlistWriter.write` given a plain map no longer annotates anything
 - `PBXProject.name`, `PBXContainerItemProxy.isRemote` and `PBXGroup.isMainGroup`
+- `XcodeProject.newObject` (and `ObjectGraph.newObject`) now takes an optional `uuid` so tools that create objects idempotently can pin stable UUIDs. A UUID that is invalid per `UuidGenerator.isValid` or already present in `objectsByUuid` throws an `ArgumentError` and never replaces the existing object; without `uuid` a generated one is used as before. This is new API: Ruby only offers the private `Klass.new(project, uuid)`
 
 ## 0.3.0
 

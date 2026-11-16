@@ -275,7 +275,21 @@ class XcodeProject implements ObjectGraph {
   /// Create a new object, assign a UUID, call `initializeDefaults()`.
   /// Does NOT register in [objectsByUuid] — registration happens via
   /// [AbstractObject.addReferrer] when the new object is first wired.
-  /// Port of Ruby `project.new_object`.
+  ///
+  /// By default the UUID comes from [generateUuid]. Pass [uuid] to pin it
+  /// instead, so a tool that creates objects idempotently gets the same
+  /// identifier on every run (no diff) and can find its objects again. The
+  /// UUID is reserved against [generateUuid] immediately, even before the
+  /// object is wired into [objectsByUuid].
+  ///
+  /// Throws an [ArgumentError] when [uuid] is not a valid Xcode UUID (see
+  /// [UuidGenerator.isValid]: 24 or 32 uppercase hex characters) or when it is
+  /// already present in [objectsByUuid]; the existing object is never replaced.
+  /// A UUID that was supplied for an object not yet wired is not detected as a
+  /// duplicate until that object is registered.
+  ///
+  /// Port of Ruby `project.new_object`. The [uuid] parameter is new API, not a
+  /// port: Ruby only offers the private `Klass.new(project, uuid)`.
   @override
   T newObject<T extends AbstractObject>(
     T Function(ObjectGraph, String) factory, {
