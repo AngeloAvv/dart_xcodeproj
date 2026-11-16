@@ -322,6 +322,11 @@ abstract class AbstractObject {
   /// 2. Validate the `isa` key matches this object's class.
   /// 3. For each key in [attributeOrder]: if the working copy contains it,
   /// delegate to [readAttribute] and remove the key from the working copy.
+  /// The keys go in the order Ruby's `configure_with_plist` reads them: the
+  /// plain attributes, then the to-one references, the to-many ones and the
+  /// references by keys, each in attribute order. As the objects referenced
+  /// are loaded when they are first read, this makes the objects of a project
+  /// register in Ruby's (depth first) order.
   /// 4. After all attributes processed, if the working copy still has keys,
   /// emit a `developer.log` warning listing the unknown keys.
   /// Port of.
@@ -342,8 +347,25 @@ abstract class AbstractObject {
     }
     ownPlist.remove('isa');
 
-    // Consume attributes in declared order.
-    for (final key in attributeOrder) {
+    // Consume attributes: plain ones first, then the references by kind.
+    final byKeys = referencesByKeysAttributeKeys.toSet();
+    final toMany = toManyAttributeKeys.toSet();
+    final references = referenceAttributes.toSet();
+    int phase(String key) => byKeys.contains(key)
+        ? 3
+        : toMany.contains(key)
+        ? 2
+        : references.contains(key)
+        ? 1
+        : 0;
+    final keys = [...attributeOrder];
+    // `List.sort` is not stable: order by (phase, position) explicitly.
+    final position = {for (var i = 0; i < keys.length; i++) keys[i]: i};
+    keys.sort((a, b) {
+      final byPhase = phase(a).compareTo(phase(b));
+      return byPhase != 0 ? byPhase : position[a]!.compareTo(position[b]!);
+    });
+    for (final key in keys) {
       if (ownPlist.containsKey(key)) {
         readAttribute(key, ownPlist[key], objectsByUuidPlist);
         ownPlist.remove(key);
