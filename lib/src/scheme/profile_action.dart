@@ -9,6 +9,9 @@ import 'buildable_product_runnable.dart';
 class ProfileAction extends AbstractSchemeAction {
   static const String _tag = 'ProfileAction';
 
+  /// Wraps [el], or creates a default `<ProfileAction>` when [el] is omitted (`Release`).
+  ///
+  /// Throws an [ArgumentError] if [el] is not a `<ProfileAction>` element.
   ProfileAction([XmlElement? el]) {
     createXmlElementWithFallback(el, _tag, () {
       buildConfiguration = 'Release';
@@ -23,6 +26,10 @@ class ProfileAction extends AbstractSchemeAction {
   // Attributes
   // ---------------------------------------------------------------------------
 
+  /// Whether this action uses the arguments and environment variables of the
+  /// launch action.
+  ///
+  /// A missing attribute reads as `false`.
   bool get shouldUseLaunchSchemeArgsEnv => stringToBool(
     xmlElement.getAttribute('shouldUseLaunchSchemeArgsEnv') ?? 'NO',
   );
