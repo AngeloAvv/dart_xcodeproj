@@ -281,12 +281,22 @@ class XcodeProject implements ObjectGraph {
     T Function(ObjectGraph, String) factory, {
     String? uuid,
   }) {
-    if (uuid != null && objectsByUuid.containsKey(uuid)) {
-      throw ArgumentError.value(
-        uuid,
-        'uuid',
-        'already used by ${objectsByUuid[uuid]!.isa} in this project',
-      );
+    if (uuid != null) {
+      if (!UuidGenerator.isValid(uuid)) {
+        throw ArgumentError.value(
+          uuid,
+          'uuid',
+          'not a valid Xcode UUID (expected 24 or 32 uppercase hex characters)',
+        );
+      }
+      final existing = objectsByUuid[uuid];
+      if (existing != null) {
+        throw ArgumentError.value(
+          uuid,
+          'uuid',
+          'already used by ${existing.isa} in this project',
+        );
+      }
     }
     final objectUuid = uuid ?? generateUuid();
     final obj = factory(this, objectUuid);

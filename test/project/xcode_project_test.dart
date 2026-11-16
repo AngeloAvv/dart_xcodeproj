@@ -118,6 +118,41 @@ void main() {
           expect(project.objectsByUuid[takenUuid], same(existing));
         },
       );
+
+      group('rejects an invalid caller-supplied uuid', () {
+        const invalid = {
+          'empty': '',
+          'too short': 'A1B2C3',
+          'lowercase': 'a1b2c3d4e5f60718293a4b5c',
+          'RFC4122 with hyphens': '123E4567-E89B-12D3-A456-426614174000',
+          'non-hex characters': 'G1B2C3D4E5F60718293A4B5C',
+          'surrounding whitespace': ' A1B2C3D4E5F60718293A4B5C ',
+          'trailing newline': 'A1B2C3D4E5F60718293A4B5C\n',
+          '25 characters': 'A1B2C3D4E5F60718293A4B5C0',
+        };
+
+        invalid.forEach((description, uuid) {
+          test(description, () async {
+            final project = await XcodeProject.create(
+              '/tmp/MyProject.xcodeproj',
+            );
+            final before = project.objectsByUuid.length;
+
+            expect(
+              () => project.newObject((g, u) => PBXGroup(g, u), uuid: uuid),
+              throwsA(isA<ArgumentError>()),
+            );
+            expect(project.objectsByUuid, hasLength(before));
+          });
+        });
+      });
+
+      test('accepts a valid 32-char (deterministic) uuid', () async {
+        final project = await XcodeProject.create('/tmp/MyProject.xcodeproj');
+        final uuid = UuidGenerator.generateDeterministic('some/structural/path');
+        final group = project.newObject((g, u) => PBXGroup(g, u), uuid: uuid);
+        expect(group.uuid, equals(uuid));
+      });
     });
 
     // -------------------------------------------------------------------------
