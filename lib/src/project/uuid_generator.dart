@@ -48,6 +48,42 @@ class UuidGenerator {
     return digest.toString().toUpperCase();
   }
 
+  /// Returns a deterministic UUID made of the first [length] uppercase hex
+  /// characters of the MD5 digest of [seed] (encoded as UTF-8).
+  ///
+  /// The result depends only on [seed] and [length], so it is stable across
+  /// runs, platforms and Dart versions: the same seed always yields the same
+  /// UUID, which makes generated projects reproducible.
+  ///
+  /// [length] can be 24 or 32, the two lengths of Xcode object UUIDs:
+  /// - `24` (default) looks like the UUIDs Xcode writes itself, so objects a
+  ///   tool adds to an Xcode-authored project blend in with the existing ones.
+  /// - `32` is the full digest and returns the same value as
+  ///   [generateDeterministic], i.e. Ruby `Digest::MD5.hexdigest(seed).upcase`
+  ///   (xcodeproj's `uuid_for_path`).
+  ///
+  /// Any other [length] throws an [ArgumentError].
+  ///
+  /// Truncating the digest to 24 characters (96 bits) makes collisions more
+  /// likely than with the full 128 bits. The risk is negligible for a
+  /// project's few thousand objects, but a seed that is not unique inside the
+  /// project produces the very same UUID on purpose. Namespace your seeds
+  /// with the tool, the target and the thing being identified, e.g.
+  /// `tool/<target>/<thing>`, so they cannot clash with the seeds of other
+  /// tools or of other targets.
+  ///
+  /// ```dart
+  /// UuidGenerator.deterministic('tool/Runner/Pods'); // 89E916EBEC582DDC4CFB8632
+  /// UuidGenerator.deterministic('tool/Runner/Pods', length: 32);
+  /// // 89E916EBEC582DDC4CFB863221C1D3F5
+  /// ```
+  static String deterministic(String seed, {int length = 24}) {
+    if (length != 24 && length != 32) {
+      throw ArgumentError.value(length, 'length', 'must be 24 or 32');
+    }
+    return generateDeterministic(seed).substring(0, length);
+  }
+
   /// Returns true if [uuid] is a valid Xcode object UUID: either 24 uppercase hex
   /// characters (random) or 32 uppercase hex characters (deterministic, MD5-based).
   /// Accepts only exactly 24 or 32 uppercase hex characters [0-9A-F].
