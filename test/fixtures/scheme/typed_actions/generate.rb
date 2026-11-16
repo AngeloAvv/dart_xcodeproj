@@ -20,7 +20,11 @@
 #   `launch_action = LaunchAction.new` / `analyze_action = AnalyzeAction.new`
 #   with a `buildConfiguration` of 'Custom';
 # - repeated_actions.moved_second_launch.ruby_saved.xcscheme: the scheme
-#   saved after assigning its own second LaunchAction to `launch_action=`.
+#   saved after assigning its own second LaunchAction to `launch_action=`;
+# - missing_actions.aliased_archive.ruby_saved.xcscheme: a scheme saved after
+#   `dest.archive_action = source.archive_action` (source lacks the action),
+#   then `source.archive_action.build_configuration = 'Release-dev'`: Ruby
+#   shares the cached default, so the change shows up in dest.
 gem 'xcodeproj', '1.27.0'
 require 'json'
 require 'xcodeproj'
@@ -119,5 +123,11 @@ moved = Xcodeproj::XCScheme.new(inputs['repeated_actions'])
 second = Xcodeproj::XCScheme::LaunchAction.new(moved.doc.root.get_elements('LaunchAction')[1])
 moved.launch_action = second
 File.write(File.join(dir, 'repeated_actions.moved_second_launch.ruby_saved.xcscheme'), moved.to_s)
+
+source = Xcodeproj::XCScheme.new(inputs['missing_actions'])
+dest = Xcodeproj::XCScheme.new(inputs['missing_actions'])
+dest.archive_action = source.archive_action
+source.archive_action.build_configuration = 'Release-dev'
+File.write(File.join(dir, 'missing_actions.aliased_archive.ruby_saved.xcscheme'), dest.to_s)
 
 File.write(File.join(dir, 'expected.json'), "#{JSON.pretty_generate(expected)}\n")

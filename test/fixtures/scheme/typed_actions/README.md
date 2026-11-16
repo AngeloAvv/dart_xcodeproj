@@ -49,6 +49,12 @@ scheme = Xcodeproj::XCScheme.new('repeated_actions.xcscheme')
 second = LaunchAction.new(scheme.doc.root.get_elements('LaunchAction')[1])
 scheme.launch_action = second
 File.write('repeated_actions.moved_second_launch.ruby_saved.xcscheme', scheme.to_s)
+
+source = Xcodeproj::XCScheme.new('missing_actions.xcscheme')
+dest = Xcodeproj::XCScheme.new('missing_actions.xcscheme')
+dest.archive_action = source.archive_action
+source.archive_action.build_configuration = 'Release-dev'
+File.write('missing_actions.aliased_archive.ruby_saved.xcscheme', dest.to_s)
 ```
 
 ## What the expectations say about Ruby
@@ -64,3 +70,8 @@ File.write('repeated_actions.moved_second_launch.ruby_saved.xcscheme', scheme.to
 - Assigning an element that is already a child of `<Scheme>` (the second of
   two `LaunchAction`s) does not move it: REXML adds it again, so the output
   has it twice. Dart copies the element, which gives the same file.
+- The detached default of a scheme that lacks an action is cached by that
+  scheme. Assigning it to another scheme (`dest.archive_action =
+  source.archive_action`) inserts that very element, so a later edit of
+  `source.archive_action` changes `dest` (`missing_actions.aliased_archive`),
+  while `source` still has no element in its document. Dart behaves the same.

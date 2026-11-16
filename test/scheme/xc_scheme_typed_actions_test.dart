@@ -402,6 +402,27 @@ void main() {
       );
     });
 
+    test('the cached default of another scheme is shared, like Ruby', () async {
+      // Ruby inserts the element the source caches, it does not copy it: a
+      // later edit of source.archive_action shows up in dest, while source
+      // still has no ArchiveAction element.
+      final source = await XCScheme.open(_fixtures['missing_actions']!);
+      final dest = await XCScheme.open(_fixtures['missing_actions']!);
+
+      dest.archiveAction = source.archiveAction;
+      source.archiveAction.buildConfiguration = 'Release-dev';
+
+      expect(
+        await saved(dest),
+        equals(
+          await File(
+            '$_dir/missing_actions.aliased_archive.ruby_saved.xcscheme',
+          ).readAsString(),
+        ),
+      );
+      expect(source.archiveActionElement, isNull);
+    });
+
     test('every action can be assigned', () async {
       final scheme = XCScheme.create();
 
