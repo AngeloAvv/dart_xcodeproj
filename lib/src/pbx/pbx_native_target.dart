@@ -815,6 +815,9 @@ class PBXNativeTarget extends AbstractTarget {
   /// same, the other settings being kept. [onBuildFile] is called with the
   /// build file of each reference, a new or an existing one.
   ///
+  /// Only [PBXFileReference]s are taken, as the Ruby docs say, though Ruby
+  /// would also take any object with a `path`, such as a group.
+  ///
   /// Throws an [ArgumentError], before changing anything, when a reference has
   /// no `path` (Ruby raises a `TypeError` midway).
   /// Port of `PBXNativeTarget#add_file_references`. [compilerFlags] is the
@@ -1039,7 +1042,8 @@ class PBXLegacyTarget extends AbstractTarget {
 
 /// The extension of [path], with its leading dot, like Ruby's `File.extname`:
 /// a leading dot of the basename does not start an extension (`.h` has none),
-/// a trailing one is one (`foo.` gives `.`).
+/// a trailing one is one (`foo.` gives `.`). `package:path`'s `extension`
+/// would take `.h` as an extension.
 String _extname(String path) {
   final trimmed = path.replaceFirst(RegExp(r'/+$'), '');
   final base = trimmed.substring(trimmed.lastIndexOf('/') + 1);

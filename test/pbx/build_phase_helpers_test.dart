@@ -3,8 +3,10 @@
 // pristine `flutter create` iOS and macOS projects. Byte-for-byte parity with
 // Ruby lives in build_phase_helpers_ruby_parity_test.dart.
 
-import 'package:dart_xcodeproj/src/pbx/pbx_build_phase.dart';
+import 'dart:io';
+
 import 'package:dart_xcodeproj/src/pbx/pbx_build_file.dart';
+import 'package:dart_xcodeproj/src/pbx/pbx_build_phase.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_file_reference.dart';
 import 'package:dart_xcodeproj/src/pbx/pbx_native_target.dart';
 import 'package:dart_xcodeproj/src/project/xcode_project.dart';
@@ -320,6 +322,30 @@ void main() {
             'ATTRIBUTES': ['Public'],
             'COMPILER_FLAGS': '-Wall',
           });
+        });
+
+        test('appends the flags to those read from the project file', () async {
+          // Written by Ruby: Foo.m has COMPILER_FLAGS "-fobjc-arc -Wall".
+          final tmp = Directory.systemTemp.createTempSync('build_phases_');
+          addTearDown(() => tmp.deleteSync(recursive: true));
+          final bundle = Directory('${tmp.path}/Runner.xcodeproj')
+            ..createSync();
+          File(
+            'test/fixtures/build_phases/$name.add_file_references.pbxproj',
+          ).copySync('${bundle.path}/project.pbxproj');
+          final opened = await XcodeProject.open(bundle.path);
+          final target = _target(opened, 'Runner');
+          final foo =
+              target.sourceBuildPhase.files
+                      .firstWhere((f) => f.displayName == 'Foo.m')
+                      .fileRef!
+                  as PBXFileReference;
+
+          final buildFile = target.addFileReferences([
+            foo,
+          ], compilerFlags: '-O').single;
+
+          expect(buildFile.settings, {'COMPILER_FLAGS': '-fobjc-arc -Wall -O'});
         });
 
         test('leaves the settings alone without compiler flags', () {
