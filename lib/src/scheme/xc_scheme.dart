@@ -194,69 +194,159 @@ class XCScheme {
   }
 
   // ---------------------------------------------------------------------------
-  // Typed action getters (SCH-04..SCH-07, )
-  // These wrap the XmlElement? getters above with typed wrapper objects.
-  // Existing XmlElement? getters are preserved for backward compatibility with
-  // tests.
+  // Typed actions
   // ---------------------------------------------------------------------------
+  // Like Ruby's `XCScheme#build_action`, `#test_action`, ... the getters wrap
+  // the first matching child of `<Scheme>`. A scheme that lacks the element
+  // gets a default action which is *not* part of the document (so a read never
+  // changes what [save] writes) until it is assigned with the setter. The
+  // wrappers share the element they wrap, so edits go straight to the
+  // document, and attributes and children the wrapper does not model are left
+  // untouched.
 
-  /// Returns a [BuildAction] wrapping the `<BuildAction>` element.
-  /// If not present, creates one and appends it to the root.
+  BuildAction? _detachedBuildAction;
+  TestAction? _detachedTestAction;
+  LaunchAction? _detachedLaunchAction;
+  ProfileAction? _detachedProfileAction;
+  AnalyzeAction? _detachedAnalyzeAction;
+  ArchiveAction? _detachedArchiveAction;
+
+  /// The `<BuildAction>` of this scheme.
+  ///
+  /// When the scheme has none, returns a default [BuildAction] that is not in
+  /// the document until it is assigned to [buildAction]; the same instance is
+  /// returned by every call, so edits made to it are kept. Like Ruby, a
+  /// repeated element is not an error: the first one is used.
   BuildAction get buildAction {
     final el = buildActionElement;
     if (el != null) return BuildAction(el);
-    final created = BuildAction();
-    document.rootElement.children.add(created.xmlElement);
-    return BuildAction(created.xmlElement);
+    return _detachedBuildAction ??= BuildAction();
   }
 
-  /// Returns a [TestAction] wrapping the `<TestAction>` element.
-  /// If not present, creates one and appends it to the root.
+  /// Replaces the `<BuildAction>` of this scheme with [action].
+  ///
+  /// Like Ruby, the first existing `<BuildAction>` is removed and the new one
+  /// is appended as the last child of `<Scheme>`. If [action] already belongs
+  /// to a document, a copy of its element is inserted.
+  set buildAction(BuildAction action) {
+    _replaceChild(buildActionElement, action.xmlElement);
+    _detachedBuildAction = null;
+  }
+
+  /// The `<TestAction>` of this scheme.
+  ///
+  /// When the scheme has none, returns a default [TestAction] that is not in
+  /// the document until it is assigned to [testAction]; the same instance is
+  /// returned by every call, so edits made to it are kept. Like Ruby, a
+  /// repeated element is not an error: the first one is used.
   TestAction get testAction {
     final el = testActionElement;
     if (el != null) return TestAction(el);
-    final created = TestAction();
-    document.rootElement.children.add(created.xmlElement);
-    return TestAction(created.xmlElement);
+    return _detachedTestAction ??= TestAction();
   }
 
-  /// Returns a [LaunchAction] wrapping the `<LaunchAction>` element.
-  /// If not present, creates one and appends it to the root.
+  /// Replaces the `<TestAction>` of this scheme with [action].
+  ///
+  /// Like Ruby, the first existing `<TestAction>` is removed and the new one
+  /// is appended as the last child of `<Scheme>`. If [action] already belongs
+  /// to a document, a copy of its element is inserted.
+  set testAction(TestAction action) {
+    _replaceChild(testActionElement, action.xmlElement);
+    _detachedTestAction = null;
+  }
+
+  /// The `<LaunchAction>` of this scheme.
+  ///
+  /// When the scheme has none, returns a default [LaunchAction] that is not in
+  /// the document until it is assigned to [launchAction]; the same instance is
+  /// returned by every call, so edits made to it are kept. Like Ruby, a
+  /// repeated element is not an error: the first one is used.
   LaunchAction get launchAction {
     final el = launchActionElement;
     if (el != null) return LaunchAction(el);
-    final created = LaunchAction();
-    document.rootElement.children.add(created.xmlElement);
-    return LaunchAction(created.xmlElement);
+    return _detachedLaunchAction ??= LaunchAction();
   }
 
-  /// Returns a [ProfileAction] wrapping the `<ProfileAction>` element.
-  /// If not present, creates one and appends it to the root.
+  /// Replaces the `<LaunchAction>` of this scheme with [action].
+  ///
+  /// Like Ruby, the first existing `<LaunchAction>` is removed and the new one
+  /// is appended as the last child of `<Scheme>`. If [action] already belongs
+  /// to a document, a copy of its element is inserted.
+  set launchAction(LaunchAction action) {
+    _replaceChild(launchActionElement, action.xmlElement);
+    _detachedLaunchAction = null;
+  }
+
+  /// The `<ProfileAction>` of this scheme.
+  ///
+  /// When the scheme has none, returns a default [ProfileAction] that is not
+  /// in the document until it is assigned to [profileAction]; the same
+  /// instance is returned by every call, so edits made to it are kept. Like
+  /// Ruby, a repeated element is not an error: the first one is used.
   ProfileAction get profileAction {
     final el = profileActionElement;
     if (el != null) return ProfileAction(el);
-    final created = ProfileAction();
-    document.rootElement.children.add(created.xmlElement);
-    return ProfileAction(created.xmlElement);
+    return _detachedProfileAction ??= ProfileAction();
   }
 
-  /// Returns an [AnalyzeAction] wrapping the `<AnalyzeAction>` element.
-  /// If not present, creates one and appends it to the root.
+  /// Replaces the `<ProfileAction>` of this scheme with [action].
+  ///
+  /// Like Ruby, the first existing `<ProfileAction>` is removed and the new
+  /// one is appended as the last child of `<Scheme>`. If [action] already
+  /// belongs to a document, a copy of its element is inserted.
+  set profileAction(ProfileAction action) {
+    _replaceChild(profileActionElement, action.xmlElement);
+    _detachedProfileAction = null;
+  }
+
+  /// The `<AnalyzeAction>` of this scheme.
+  ///
+  /// When the scheme has none, returns a default [AnalyzeAction] that is not
+  /// in the document until it is assigned to [analyzeAction]; the same
+  /// instance is returned by every call, so edits made to it are kept. Like
+  /// Ruby, a repeated element is not an error: the first one is used.
   AnalyzeAction get analyzeAction {
     final el = analyzeActionElement;
     if (el != null) return AnalyzeAction(el);
-    final created = AnalyzeAction();
-    document.rootElement.children.add(created.xmlElement);
-    return AnalyzeAction(created.xmlElement);
+    return _detachedAnalyzeAction ??= AnalyzeAction();
   }
 
-  /// Returns an [ArchiveAction] wrapping the `<ArchiveAction>` element.
-  /// If not present, creates one and appends it to the root.
+  /// Replaces the `<AnalyzeAction>` of this scheme with [action].
+  ///
+  /// Like Ruby, the first existing `<AnalyzeAction>` is removed and the new
+  /// one is appended as the last child of `<Scheme>`. If [action] already
+  /// belongs to a document, a copy of its element is inserted.
+  set analyzeAction(AnalyzeAction action) {
+    _replaceChild(analyzeActionElement, action.xmlElement);
+    _detachedAnalyzeAction = null;
+  }
+
+  /// The `<ArchiveAction>` of this scheme.
+  ///
+  /// When the scheme has none, returns a default [ArchiveAction] that is not
+  /// in the document until it is assigned to [archiveAction]; the same
+  /// instance is returned by every call, so edits made to it are kept. Like
+  /// Ruby, a repeated element is not an error: the first one is used.
   ArchiveAction get archiveAction {
     final el = archiveActionElement;
     if (el != null) return ArchiveAction(el);
-    final created = ArchiveAction();
-    document.rootElement.children.add(created.xmlElement);
-    return ArchiveAction(created.xmlElement);
+    return _detachedArchiveAction ??= ArchiveAction();
+  }
+
+  /// Replaces the `<ArchiveAction>` of this scheme with [action].
+  ///
+  /// Like Ruby, the first existing `<ArchiveAction>` is removed and the new
+  /// one is appended as the last child of `<Scheme>`. If [action] already
+  /// belongs to a document, a copy of its element is inserted.
+  set archiveAction(ArchiveAction action) {
+    _replaceChild(archiveActionElement, action.xmlElement);
+    _detachedArchiveAction = null;
+  }
+
+  void _replaceChild(XmlElement? existing, XmlElement replacement) {
+    existing?.remove();
+    document.rootElement.children.add(
+      replacement.parent == null ? replacement : replacement.copy(),
+    );
   }
 }
