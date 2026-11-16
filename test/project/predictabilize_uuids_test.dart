@@ -170,6 +170,39 @@ void main() {
         expect(project.objectsByUuid[oldUuid], same(orphan));
       });
 
+      test(
+        'refuses to run when an unreachable object has a UUID a reachable one would get',
+        () {
+          // Neither can be dropped, so the project is left as it is.
+          final orphan = project.newObject(
+            (g, u) => PBXGroup(g, u),
+            uuid: _md5('Test.xcodeproj'),
+          );
+          orphan.addReferrer(project);
+          final objectsBefore = Map.of(project.objectsByUuid);
+          final uuidsBefore = {
+            for (final object in objectsBefore.values) object: object.uuid,
+          };
+
+          expect(
+            () => project.predictabilizeUuids(),
+            throwsA(
+              isA<StateError>().having(
+                (e) => e.message,
+                'message',
+                contains(orphan.uuid),
+              ),
+            ),
+          );
+
+          expect(project.objectsByUuid, equals(objectsBefore));
+          expect(project.objectsByUuid[orphan.uuid], same(orphan));
+          for (final entry in uuidsBefore.entries) {
+            expect(entry.key.uuid, entry.value);
+          }
+        },
+      );
+
       test('gives two objects with the same path the same UUID', () {
         // Two groups of the same name in the same group look the same.
         final first = project.newGroup('Same');

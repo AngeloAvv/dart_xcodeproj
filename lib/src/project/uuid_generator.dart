@@ -174,6 +174,11 @@ class UuidGenerator {
   /// same path they get the same UUID: the later one found replaces the
   /// earlier in [XcodeProject.objectsByUuid] and a warning is logged.
   ///
+  /// Throws a [StateError] if an object the root cannot reach already has the
+  /// UUID a reachable object would be given, since both cannot be kept (Ruby
+  /// never loads such an object, so it has no such case). The project is left
+  /// as it was.
+  ///
   /// Port of Ruby's `UUIDGenerator#generate!`.
   static void predictabilize(XcodeProject project) {
     final root = project.rootObject;
@@ -187,10 +192,29 @@ class UuidGenerator {
         .where((object) => !paths.containsKey(object))
         .toList();
 
+    final newUuids = {
+      for (final entry in paths.entries)
+        entry.key: generateDeterministic(entry.value),
+    };
+
+    // An unreachable object keeps its UUID, so no reachable object may be given
+    // it. Check before anything is changed: there is no way to keep both.
+    final taken = {for (final object in unreachable) object.uuid};
+    final clashes = {
+      for (final uuid in newUuids.values)
+        if (taken.contains(uuid)) uuid,
+    };
+    if (clashes.isNotEmpty) {
+      throw StateError(
+        'Cannot predictabilize the UUIDs: ${clashes.join(', ')} would be given '
+        'to an object of the project while an object the root does not reach '
+        'already has it. Remove the unreachable object or change its UUID.',
+      );
+    }
+
     final switched = <String, AbstractObject>{};
     final overwritten = <AbstractObject>[];
-    paths.forEach((object, path) {
-      final uuid = generateDeterministic(path);
+    newUuids.forEach((object, uuid) {
       object.assignUuid(uuid);
       final previous = switched[uuid];
       if (previous != null) overwritten.add(previous);
@@ -228,7 +252,7 @@ class UuidGenerator {
     // Unreachable objects are not part of Ruby's object graph at all; keep
     // them rather than silently dropping them from the project.
     for (final object in unreachable) {
-      switched.putIfAbsent(object.uuid, () => object);
+      switched[object.uuid] = object;
     }
     project.objectsByUuid
       ..clear()
