@@ -40,7 +40,9 @@ project.save
 | `subproject` | `test/fixtures/subproject.pbxproj`: a project reference and test target attributes |
 | `kitchen_sink` | `kitchen_sink.pbxproj`: build rules, legacy and aggregate targets, version and variant groups, a synchronized folder, headers/copy files/Rez/shell script phases |
 
-`kitchen_sink` leaves out a synchronized folder exception set that points at
+`kitchen_sink` has two identical groups, which get the same path and so the
+same UUID (Ruby warns about the duplicate UUIDs and keeps one of them, as Dart
+does). It leaves out a synchronized folder exception set that points at
 its target: Ruby recurses forever on it (`SystemStackError`), which Dart does
 not.
 

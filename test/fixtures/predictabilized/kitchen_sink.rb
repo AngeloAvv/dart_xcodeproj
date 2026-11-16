@@ -32,6 +32,10 @@ Dir.mktmpdir do |tmp|
   app.add_file_references([swift, other])
   app.headers_build_phase.add_file_reference(header, true)
 
+  # Two groups that look the same get the same path, hence the same UUID:
+  # predictabilize_uuids warns and keeps one of them.
+  2.times { sources.new_group('Duplicate') }
+
   # A variant group, as Xcode makes for localized resources.
   variant = sources.new_variant_group('Localizable.strings')
   variant.new_reference('en.lproj/Localizable.strings')

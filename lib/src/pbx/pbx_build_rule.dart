@@ -107,7 +107,7 @@ class PBXBuildRule extends AbstractObject {
   String get asciiPlistAnnotation => ' PBXBuildRule ';
 
   /// The [name], unless it is missing or empty.
-  /// Port of `display_name`.
+  /// Port of `AbstractObject#display_name`.
   @override
   String get displayName {
     final declared = name;
