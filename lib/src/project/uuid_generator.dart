@@ -64,6 +64,9 @@ class UuidGenerator {
   ///
   /// Any other [length] throws an [ArgumentError].
   ///
+  /// A [seed] that is not well-formed UTF-16 (a lone surrogate) is encoded
+  /// with U+FFFD in its place, so it hashes like any other string would.
+  ///
   /// Truncating the digest to 24 characters (96 bits) makes collisions more
   /// likely than with the full 128 bits. The risk is negligible for a
   /// project's few thousand objects, but a seed that is not unique inside the

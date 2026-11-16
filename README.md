@@ -64,7 +64,7 @@ create-project / add-target / add-file / save workflow.
 | `XCScheme` | Read and write `.xcscheme` files |
 | `XcConfig` | Read, merge, and write `.xcconfig` files |
 | `Differ` | UUID-agnostic recursive diff between two projects |
-| `UuidGenerator` | Generate 24-char uppercase hex UUIDs (random + deterministic) |
+| `UuidGenerator` | Generate uppercase hex UUIDs: random (24 chars) and deterministic from a seed (24 or 32 chars) |
 | `Constants` | Xcode file types, product types, SDK versions, and more |
 | `OtherLinkerFlagsParser` | Parse `OTHER_LDFLAGS`-style settings |
 | `PBXNativeTarget` | Native app/framework/library target |
