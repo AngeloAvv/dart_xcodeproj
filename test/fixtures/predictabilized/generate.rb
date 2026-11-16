@@ -15,6 +15,7 @@
 #   hand-written edge cases);
 # - test/fixtures/subproject.pbxproj, which has a `projectReferences`
 #   dictionary and test target attributes;
+# - foreign_proxy.pbxproj, written below from the one above;
 # - kitchen_sink.pbxproj next to this script (written by kitchen_sink.rb),
 #   which has the kinds of object the Flutter projects lack.
 #
@@ -36,6 +37,15 @@ inputs = {}
 end
 inputs['subproject'] = File.join(fixtures, 'subproject.pbxproj')
 inputs['kitchen_sink'] = File.join(dir, 'kitchen_sink.pbxproj')
+
+# subproject.pbxproj with the target UUID of the other project (the
+# `remoteGlobalIDString` of the proxy into it) changed to the UUID of the App
+# target of this one, as happens to copied projects. Ruby rewrites it with the
+# UUID of App, even though the proxy points into another project.
+inputs['foreign_proxy'] = File.join(dir, 'foreign_proxy.pbxproj')
+File.write(inputs['foreign_proxy'],
+           File.read(inputs['subproject'])
+               .gsub('E59D8E4D87B0A99DD2842F22', '8CB879CF1870C87711D7B6B3'))
 
 round_trip = %w[ios macos_spm]
 

@@ -165,7 +165,10 @@ class UuidGenerator {
   /// [PBXContainerItemProxy] and, in the project's `TargetAttributes`, the
   /// target UUID keys and the `TestTargetID` values. A UUID that is not one of
   /// the project's, such as the `remoteGlobalIDString` of a target of another
-  /// project, is left untouched.
+  /// project, is left untouched. Like Ruby, which compares values only, this
+  /// holds for a UUID that is not the old UUID of any object of the project:
+  /// if the `remoteGlobalIDString` of a proxy into another project happens to
+  /// be one, it is rewritten as well.
   ///
   /// Objects the root cannot reach keep their UUID. If two objects have the
   /// same path they get the same UUID: the later one found replaces the

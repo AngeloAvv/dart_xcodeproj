@@ -38,6 +38,7 @@ project.save
 |-------|------|
 | `ios`, `macos`, `ios_spm`, `macos_spm`, `edge` | `test/fixtures/annotations/<name>.xcodeproj`: pristine `flutter create` projects (iOS, macOS, with and without Swift Package Manager) and the hand-written edge cases |
 | `subproject` | `test/fixtures/subproject.pbxproj`: a project reference and test target attributes |
+| `foreign_proxy` | `subproject` with the remote target of its proxy given the UUID of a local target: Ruby rewrites that UUID too, whatever `containerPortal` says (checked with 1.27.0 and 1.28.1) |
 | `kitchen_sink` | `kitchen_sink.pbxproj`: build rules, legacy and aggregate targets, version and variant groups, a synchronized folder, headers/copy files/Rez/shell script phases |
 
 `kitchen_sink` has two identical groups, which get the same path and so the

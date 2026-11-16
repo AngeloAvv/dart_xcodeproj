@@ -25,6 +25,9 @@ const _inputs = {
   'edge': '$_fixtures/annotations/edge.xcodeproj/project.pbxproj',
   'subproject': '$_fixtures/subproject.pbxproj',
   'kitchen_sink': '$_expectedDir/kitchen_sink.pbxproj',
+  // The remote target of a proxy into another project has the UUID of a local
+  // target, and Ruby rewrites it like a local one.
+  'foreign_proxy': '$_expectedDir/foreign_proxy.pbxproj',
 };
 
 /// The UUIDs that are not objects of the project and so are not rewritten: the
