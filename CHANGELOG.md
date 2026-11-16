@@ -9,6 +9,7 @@
 - `PBXTargetDependency.displayName` falls back to the proxy's `remoteInfo` (a dependency on a target of another project), and `PBXBuildRule.displayName` is its `name`, like Ruby's `display_name`
 - `GroupableHelper.realPath` resolves the leading `.` and `..` of a path against its source tree like Ruby's `Pathname#+` (`<DIR>/Runner` + `../Flutter/x` is `<DIR>/Flutter/x`, not `<DIR>/Runner/../Flutter/x`)
 - `XcodeProject.open` registers the objects in the order Ruby loads them (depth first from the root object, plain attributes before to-one before to-many references), so `objectsByUuid`, `files` and `groups` list them in that order. Objects the root does not reach come last
+- `XCScheme.buildAction`, `testAction`, `launchAction`, `profileAction`, `analyzeAction` and `archiveAction` no longer add an element to the document when the scheme lacks it. Like Ruby's `XCScheme#launch_action` and friends they return a default action that is not saved until it is assigned, and the same instance on every call, so reading a getter never changes what `save` writes. Code that relied on the getter attaching the missing element must now assign it (`scheme.testAction = scheme.testAction`)
 
 ### Features
 
@@ -20,6 +21,7 @@
 - `UuidGenerator.structuralPaths` returns the structural path of every object of a project, and `AbstractObject.toManyAttributeKeys` / `referencesByKeysAttributeKeys` expose the plist keys those paths are made of
 - `PBXGroup.findSubpath(path, {create})`, `findFileByPath(path)` and `recursiveChildren`, ported from xcodeproj. `findSubpath` walks `/` separated names matched against Ruby's `display_name` (a group without name and path has none, so only `''` or `'/'` find it), the first match wins, and `create: true` adds a `PBXGroup` for each missing name. It returns an `AbstractObject?`, as Ruby returns files too, and throws a `StateError` where Ruby raises `NoMethodError` (a file in the middle of the path). `PBXGroup.clear`, `PBXGroup.buildFiles` and `PBXFileReference.buildFiles` already existed and now have Ruby parity tests
 - `XcodeProject.nativeTargets` (the `PBXNativeTarget`s of `targets`, without aggregate and legacy ones) and `XcodeProject.referenceForPath(absolutePath)`, which returns the first `PBXFileReference` whose real path is `absolutePath` (an `ArgumentError` for a relative one; it is not normalized, like Ruby's `Pathname#==`). `GroupableHelper.realPath` has a new `projectDir` parameter, for projects opened from a relative path
+- `XCScheme.buildAction`, `testAction`, `launchAction`, `profileAction`, `analyzeAction` and `archiveAction` now have setters, like Ruby's `XCScheme#launch_action=` and friends: the first existing element is removed and the action is appended to `<Scheme>` (a copy, if it already belongs to a document). The getters return the typed actions, so `scheme.launchAction.buildConfiguration = 'Debug-dev'` changes only that attribute and keeps every other attribute, `PreActions`/`PostActions` and unknown child element as they were.
 
 ## 0.3.0
 
