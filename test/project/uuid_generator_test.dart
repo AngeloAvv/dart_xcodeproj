@@ -57,6 +57,92 @@ void main() {
     });
   });
 
+  group('UuidGenerator.deterministic', () {
+    // Expected values computed independently with Python's
+    // hashlib.md5(seed.encode('utf-8')).hexdigest().upper().
+    test('defaults to the first 24 uppercase hex chars of the MD5', () {
+      expect(
+        UuidGenerator.deterministic('tool/Runner/Pods'),
+        equals('89E916EBEC582DDC4CFB8632'),
+      );
+    });
+
+    test('length 32 returns the full MD5, as Ruby uuid_for_path', () {
+      expect(
+        UuidGenerator.deterministic('tool/Runner/Pods', length: 32),
+        equals('89E916EBEC582DDC4CFB863221C1D3F5'),
+      );
+      expect(
+        UuidGenerator.deterministic('hello', length: 32),
+        equals('5D41402ABC4B2A76B9719D911017C592'),
+      );
+      expect(
+        UuidGenerator.deterministic('hello', length: 32),
+        equals(UuidGenerator.generateDeterministic('hello')),
+      );
+    });
+
+    test('empty seed has a stable value', () {
+      expect(
+        UuidGenerator.deterministic(''),
+        equals('D41D8CD98F00B204E9800998'),
+      );
+      expect(
+        UuidGenerator.deterministic('', length: 32),
+        equals('D41D8CD98F00B204E9800998ECF8427E'),
+      );
+    });
+
+    test('seeds are hashed as UTF-8, so non-ASCII seeds are stable', () {
+      expect(
+        UuidGenerator.deterministic('café'),
+        equals('07117FE4A1EBD544965DC195'),
+      );
+      expect(
+        UuidGenerator.deterministic('日本語'),
+        equals('00110AF8B4393EF3F72C50BE'),
+      );
+      // Outside the BMP: a surrogate pair in UTF-16, four bytes in UTF-8.
+      expect(
+        UuidGenerator.deterministic('🚀'),
+        equals('107040754CAE44F639957714'),
+      );
+    });
+
+    test('output is uppercase and passes isValid for both lengths', () {
+      for (final length in [24, 32]) {
+        final uuid = UuidGenerator.deterministic(
+          'tool/Runner/Pods',
+          length: length,
+        );
+        expect(uuid, hasLength(length));
+        expect(uuid, equals(uuid.toUpperCase()));
+        expect(UuidGenerator.isValid(uuid), isTrue);
+      }
+    });
+
+    test('rejects any length other than 24 or 32 with ArgumentError', () {
+      for (final length in [-1, 0, 1, 12, 23, 25, 31, 33, 40]) {
+        expect(
+          () => UuidGenerator.deterministic('seed', length: length),
+          throwsA(
+            isA<ArgumentError>()
+                .having((e) => e.name, 'name', 'length')
+                .having((e) => e.invalidValue, 'invalidValue', length),
+          ),
+          reason: 'length $length',
+        );
+      }
+    });
+
+    test('the 24-char value is the prefix of the 32-char value', () {
+      expect(
+        UuidGenerator.deterministic('a/b/c', length: 32),
+        startsWith(UuidGenerator.deterministic('a/b/c')),
+      );
+    });
+  });
+
   group('UuidGenerator.isValid', () {
     test('accepts 24 uppercase hex chars', () {
       expect(UuidGenerator.isValid('ABCDEF0123456789ABCDEF01'), isTrue);

@@ -11,6 +11,7 @@
 
 - `AbstractObject.toAsciiPlist()` / `toAsciiPlistHash()` and the `AnnotatedString` / `AnnotatedDictionary` plist nodes, which `AsciiPlistWriter` prints annotations from. `AbstractObject.asciiPlistAnnotation` is now `String?`: `null` (no annotation) for the main group. `AsciiPlistWriter.write` given a plain map no longer annotates anything
 - `PBXProject.name`, `PBXContainerItemProxy.isRemote` and `PBXGroup.isMainGroup`
+- `UuidGenerator.deterministic(seed, {length = 24})` returns the first 24 or 32 uppercase hex characters of the MD5 of `seed`, so tools can create stable, Xcode-looking 24-char UUIDs. With `length: 32` it equals `generateDeterministic` (Ruby's `uuid_for_path`); any other length throws an `ArgumentError`. Truncation raises the collision odds, so namespace seeds, e.g. `tool/<target>/<thing>`
 
 ## 0.3.0
 
