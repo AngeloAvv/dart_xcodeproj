@@ -197,6 +197,24 @@ void main() {
         },
       );
 
+      test('a uuid freed by removeFromProject can be pinned again', () async {
+        final project = await XcodeProject.create('/tmp/MyProject.xcodeproj');
+        final first = project.newObject(
+          (g, u) => PBXGroup(g, u),
+          uuid: _customUuid,
+        );
+        project.mainGroup.children.add(first);
+        first.removeFromProject();
+        expect(project.objectsByUuid, isNot(contains(_customUuid)));
+
+        final second = project.newObject(
+          (g, u) => PBXGroup(g, u),
+          uuid: _customUuid,
+        );
+        project.mainGroup.children.add(second);
+        expect(project.objectsByUuid[_customUuid], same(second));
+      });
+
       test('accepts a valid 32-char (deterministic) uuid', () async {
         final project = await XcodeProject.create('/tmp/MyProject.xcodeproj');
         final uuid = UuidGenerator.generateDeterministic(

@@ -285,8 +285,10 @@ class XcodeProject implements ObjectGraph {
   /// Throws an [ArgumentError] when [uuid] is not a valid Xcode UUID (see
   /// [UuidGenerator.isValid]: 24 or 32 uppercase hex characters) or when it is
   /// already present in [objectsByUuid]; the existing object is never replaced.
-  /// A UUID that was supplied for an object not yet wired is not detected as a
-  /// duplicate until that object is registered.
+  /// Only objects already registered are checked: two objects created with the
+  /// same [uuid] before either is wired are not detected, so wire an object
+  /// before pinning the same UUID again. A UUID freed by
+  /// [AbstractObject.removeFromProject] can be pinned again.
   ///
   /// Port of Ruby `project.new_object`. The [uuid] parameter is new API, not a
   /// port: Ruby only offers the private `Klass.new(project, uuid)`.
@@ -311,15 +313,12 @@ class XcodeProject implements ObjectGraph {
           'already used by ${existing.isa} in this project',
         );
       }
-    }
-    if (uuid != null) {
       // The object is not in [objectsByUuid] until it is wired, so reserve the
       // UUID to keep [generateUuid] from handing it out in the meantime.
       _availableUuids.remove(uuid);
       if (!_generatedUuids.contains(uuid)) _generatedUuids.add(uuid);
     }
-    final objectUuid = uuid ?? generateUuid();
-    final obj = factory(this, objectUuid);
+    final obj = factory(this, uuid ?? generateUuid());
     obj.initializeDefaults();
     return obj;
   }
