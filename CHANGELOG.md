@@ -11,6 +11,7 @@
 
 - `AbstractObject.toAsciiPlist()` / `toAsciiPlistHash()` and the `AnnotatedString` / `AnnotatedDictionary` plist nodes, which `AsciiPlistWriter` prints annotations from. `AbstractObject.asciiPlistAnnotation` is now `String?`: `null` (no annotation) for the main group. `AsciiPlistWriter.write` given a plain map no longer annotates anything
 - `PBXProject.name`, `PBXContainerItemProxy.isRemote` and `PBXGroup.isMainGroup`
+- `XcodeProject.newObject` (and `ObjectGraph.newObject`) now takes an optional `uuid` so tools that create objects idempotently can pin stable UUIDs. A UUID that is invalid per `UuidGenerator.isValid` or already present in `objectsByUuid` throws an `ArgumentError` and never replaces the registered object; without `uuid` a generated one is used as before. Classes implementing `ObjectGraph` must accept the new parameter. This is new API: Ruby only offers the private `Klass.new(project, uuid)`
 - `UuidGenerator.deterministic(seed, {length = 24})` returns the first 24 or 32 uppercase hex characters of the MD5 of `seed`, so tools can create stable, Xcode-looking 24-char UUIDs. With `length: 32` it equals `generateDeterministic` (Ruby's `uuid_for_path`); any other length throws an `ArgumentError`. Truncation raises the collision odds, so namespace seeds, e.g. `tool/<target>/<thing>`
 
 ## 0.3.0

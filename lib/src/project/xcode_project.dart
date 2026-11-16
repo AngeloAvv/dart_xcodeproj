@@ -275,13 +275,50 @@ class XcodeProject implements ObjectGraph {
   /// Create a new object, assign a UUID, call `initializeDefaults()`.
   /// Does NOT register in [objectsByUuid] — registration happens via
   /// [AbstractObject.addReferrer] when the new object is first wired.
-  /// Port of Ruby `project.new_object`.
+  ///
+  /// By default the UUID comes from [generateUuid]. Pass [uuid] to pin it
+  /// instead, so a tool that creates objects idempotently gets the same
+  /// identifier on every run (no diff) and can find its objects again. The
+  /// UUID is reserved against [generateUuid] immediately, even before the
+  /// object is wired into [objectsByUuid].
+  ///
+  /// Throws an [ArgumentError] when [uuid] is not a valid Xcode UUID (see
+  /// [UuidGenerator.isValid]: 24 or 32 uppercase hex characters) or when it is
+  /// already present in [objectsByUuid]; the existing object is never replaced.
+  /// Only objects already registered are checked: two objects created with the
+  /// same [uuid] before either is wired are not detected, so wire an object
+  /// before pinning the same UUID again. A UUID freed by
+  /// [AbstractObject.removeFromProject] can be pinned again.
+  ///
+  /// Port of Ruby `project.new_object`. The [uuid] parameter is new API, not a
+  /// port: Ruby only offers the private `Klass.new(project, uuid)`.
   @override
   T newObject<T extends AbstractObject>(
-    T Function(ObjectGraph, String) factory,
-  ) {
-    final uuid = generateUuid();
-    final obj = factory(this, uuid);
+    T Function(ObjectGraph, String) factory, {
+    String? uuid,
+  }) {
+    if (uuid != null) {
+      if (!UuidGenerator.isValid(uuid)) {
+        throw ArgumentError.value(
+          uuid,
+          'uuid',
+          'not a valid Xcode UUID (expected 24 or 32 uppercase hex characters)',
+        );
+      }
+      final existing = objectsByUuid[uuid];
+      if (existing != null) {
+        throw ArgumentError.value(
+          uuid,
+          'uuid',
+          'already used by ${existing.isa} in this project',
+        );
+      }
+      // The object is not in [objectsByUuid] until it is wired, so reserve the
+      // UUID to keep [generateUuid] from handing it out in the meantime.
+      _availableUuids.remove(uuid);
+      if (!_generatedUuids.contains(uuid)) _generatedUuids.add(uuid);
+    }
+    final obj = factory(this, uuid ?? generateUuid());
     obj.initializeDefaults();
     return obj;
   }

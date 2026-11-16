@@ -18,9 +18,16 @@ abstract class ObjectGraph {
   /// Create a new object, assign a UUID, call `initializeDefaults()`.
   /// Does NOT register in [objectsByUuid] — registration happens via
   /// [AbstractObject.addReferrer] when the new object is first referenced.
+  ///
+  /// When [uuid] is given it is used as the object's UUID instead of a
+  /// generated one. Implementations MUST reject a [uuid] that is not a valid
+  /// Xcode UUID or that is already present in [objectsByUuid], and MUST NOT
+  /// replace the existing object. This is new API: Ruby only exposes it through
+  /// the private `Klass.new(project, uuid)`.
   T newObject<T extends AbstractObject>(
-    T Function(ObjectGraph, String) factory,
-  );
+    T Function(ObjectGraph, String) factory, {
+    String? uuid,
+  });
 
   /// The plist object version string (e.g., '54').
   /// Used by [XCBuildConfiguration._normalizeArraySettings] to select the correct
