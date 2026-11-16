@@ -14,6 +14,7 @@ import '../pbx/pbx_container_item_proxy.dart';
 import '../pbx/pbx_file_reference.dart';
 import '../pbx/pbx_project.dart';
 import '../pbx/pbx_target_dependency.dart';
+import '../pbx/xc_build_configuration.dart';
 import 'case_converter.dart';
 import 'xcode_project.dart';
 
@@ -385,12 +386,26 @@ class _StructuralPaths {
       } else if (references.contains(key)) {
         final target = _resolve(object, hash[key]);
         if (target != null) tree[key] = _node(target, childDepth);
-      } else if (hash[key] != null && hash[key] != false) {
-        tree[key] = hash[key];
+      } else {
+        final value = _rawAttribute(object, key, hash);
+        if (value != null && value != false) tree[key] = value;
       }
     }
     return tree;
   }
+
+  /// The value of the simple attribute [key] of [object] as the model holds
+  /// it. [hash] is [AbstractObject.toHash] of [object], which writes some
+  /// attributes in the form of the file instead: a build setting given as a
+  /// space separated string comes back as a list. Ruby's `to_tree_hash` reads
+  /// the attribute, `to_hash_as` is where it is normalized.
+  dynamic _rawAttribute(
+    AbstractObject object,
+    String key,
+    Map<String, dynamic> hash,
+  ) => object is XCBuildConfiguration && key == 'buildSettings'
+      ? object.buildSettings
+      : hash[key];
 
   /// The tree hash of [object] standing at [depth], or [_cut] past the end.
   dynamic _node(AbstractObject object, int depth) =>
