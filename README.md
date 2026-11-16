@@ -57,9 +57,11 @@ create-project / add-target / add-file / save workflow.
 ### Predictable UUIDs
 
 `predictabilizeUuids()` replaces every UUID of a machine-generated project with
-the MD5 of the structural path of its object, so regenerating the project
-gives the same file (the output matches Ruby's `Project#predictabilize_uuids`
-byte for byte):
+the MD5 of the structural path of its object (the output matches Ruby's
+`Project#predictabilize_uuids` byte for byte). Regenerating the project gives
+the same file only if everything the paths are made of is the same, including
+the UUIDs held as strings (`containerPortal`, `remoteGlobalIDString`) of the
+proxies of target dependencies, which are part of the path of a target:
 
 ```dart
 final project = await XcodeProject.open('Pods/Pods.xcodeproj');
