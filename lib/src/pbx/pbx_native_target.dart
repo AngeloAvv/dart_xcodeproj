@@ -1,5 +1,6 @@
 import '../constants/misc.dart';
 import '../object/abstract_object.dart';
+import '../object/object_graph.dart';
 import '../object/object_list.dart';
 import 'pbx_build_phase.dart';
 import 'pbx_container_item_proxy.dart';
@@ -698,6 +699,62 @@ class PBXNativeTarget extends AbstractTarget {
       if (dep.targetProxy?.remoteGlobalIDString == target.uuid) return dep;
     }
     return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build phase helpers
+  // ---------------------------------------------------------------------------
+
+  /// Finds or creates the sources build phase of the target.
+  ///
+  /// A target should have only one sources build phase: the first one is
+  /// returned, and when there is none a new [PBXSourcesBuildPhase] is appended
+  /// to [buildPhases].
+  /// Port of `PBXNativeTarget#source_build_phase`.
+  PBXSourcesBuildPhase get sourceBuildPhase =>
+      _findOrCreateBuildPhase((g, u) => PBXSourcesBuildPhase(g, u));
+
+  /// Finds or creates the frameworks build phase of the target.
+  ///
+  /// A target should have only one frameworks build phase: the first one is
+  /// returned, and when there is none a new [PBXFrameworksBuildPhase] is
+  /// appended to [buildPhases].
+  /// Port of `PBXNativeTarget#frameworks_build_phase`.
+  PBXFrameworksBuildPhase get frameworksBuildPhase =>
+      _findOrCreateBuildPhase((g, u) => PBXFrameworksBuildPhase(g, u));
+
+  /// Finds or creates the resources build phase of the target.
+  ///
+  /// A target should have only one resources build phase: the first one is
+  /// returned, and when there is none a new [PBXResourcesBuildPhase] is
+  /// appended to [buildPhases].
+  /// Port of `PBXNativeTarget#resources_build_phase`.
+  PBXResourcesBuildPhase get resourcesBuildPhase =>
+      _findOrCreateBuildPhase((g, u) => PBXResourcesBuildPhase(g, u));
+
+  /// Finds or creates the headers build phase of the target.
+  ///
+  /// A target should have only one headers build phase: the first one is
+  /// returned, and when there is none a new [PBXHeadersBuildPhase] is appended
+  /// to [buildPhases].
+  /// Port of `PBXNativeTarget#headers_build_phase`.
+  PBXHeadersBuildPhase get headersBuildPhase =>
+      _findOrCreateBuildPhase((g, u) => PBXHeadersBuildPhase(g, u));
+
+  /// Finds the first build phase whose class is exactly [T], or creates one
+  /// and appends it to [buildPhases].
+  /// Port of `PBXNativeTarget#find_or_create_build_phase_by_class`. Ruby also
+  /// memoizes the phase in an instance variable, which goes stale when the
+  /// phase is removed from the target: this looks [buildPhases] up every time.
+  T _findOrCreateBuildPhase<T extends AbstractBuildPhase>(
+    T Function(ObjectGraph, String) factory,
+  ) {
+    for (final phase in buildPhases) {
+      if (phase.runtimeType == T) return phase as T;
+    }
+    final phase = project.newObject(factory);
+    buildPhases.add(phase);
+    return phase;
   }
 }
 
