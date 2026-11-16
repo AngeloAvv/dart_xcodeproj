@@ -97,7 +97,11 @@ class PBXTargetDependency extends AbstractObject {
   List<String> get referenceAttributes => const [_kTarget, _kTargetProxy];
 
   @override
-  String get displayName => name ?? _target?.displayName ?? super.displayName;
+  String get displayName =>
+      name ??
+      _target?.displayName ??
+      _targetProxy?.remoteInfo ??
+      super.displayName;
 
   /// Annotation is always the bare ISA, e.g. `' PBXTargetDependency '`.
   /// Port of `PBXTargetDependency#ascii_plist_annotation`.

@@ -240,6 +240,9 @@ class PBXGroup extends AbstractObject {
   List<ObjectList<Object>> get toManyAttributes => [children];
 
   @override
+  List<String> get toManyAttributeKeys => const [_kChildren];
+
+  @override
   void clearRelationships() {
     children.clear();
   }

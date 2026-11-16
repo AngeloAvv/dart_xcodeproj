@@ -207,4 +207,41 @@ void main() {
       },
     );
   });
+
+  // ---------------------------------------------------------------------------
+  // displayName: name, then the target's name, then the proxy's remoteInfo
+  // (Ruby's PBXTargetDependency#display_name)
+  // ---------------------------------------------------------------------------
+  group('PBXTargetDependency displayName', () {
+    test('is the name of a dependency on a target of another project', () {
+      final dep = graph.newObject((g, u) => PBXTargetDependency(g, u));
+      final proxy = graph.newObject((g, u) => PBXContainerItemProxy(g, u));
+      proxy.remoteInfo = 'Sub';
+      dep.targetProxy = proxy;
+
+      expect(dep.displayName, equals('Sub'));
+    });
+
+    test('prefers the target over the proxy', () {
+      final dep = graph.newObject((g, u) => PBXTargetDependency(g, u));
+      final proxy = graph.newObject((g, u) => PBXContainerItemProxy(g, u));
+      proxy.remoteInfo = 'Sub';
+      dep.targetProxy = proxy;
+      final target = graph.newObject((g, u) => _StubTarget(g, u))
+        ..name = 'Runner';
+      dep.target = target;
+
+      expect(dep.displayName, equals('Runner'));
+    });
+
+    test('prefers its own name', () {
+      final dep = graph.newObject((g, u) => PBXTargetDependency(g, u))
+        ..name = 'Named';
+      final proxy = graph.newObject((g, u) => PBXContainerItemProxy(g, u));
+      proxy.remoteInfo = 'Sub';
+      dep.targetProxy = proxy;
+
+      expect(dep.displayName, equals('Named'));
+    });
+  });
 }

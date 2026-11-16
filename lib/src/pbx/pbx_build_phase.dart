@@ -191,6 +191,12 @@ abstract class AbstractBuildPhase extends AbstractObject {
   ];
 
   @override
+  List<String> get toManyAttributeKeys => [
+    ...super.toManyAttributeKeys,
+    _kFiles,
+  ];
+
+  @override
   void clearRelationships() {
     files.clear();
   }

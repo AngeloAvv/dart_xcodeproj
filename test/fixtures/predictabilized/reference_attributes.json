@@ -1,0 +1,230 @@
+{
+  "AbstractBuildPhase": {
+    "toOne": [],
+    "toMany": [
+      "files"
+    ],
+    "referencesByKeys": []
+  },
+  "AbstractTarget": {
+    "toOne": [
+      "buildConfigurationList"
+    ],
+    "toMany": [
+      "dependencies"
+    ],
+    "referencesByKeys": []
+  },
+  "PBXAggregateTarget": {
+    "toOne": [
+      "buildConfigurationList"
+    ],
+    "toMany": [
+      "buildPhases",
+      "dependencies"
+    ],
+    "referencesByKeys": []
+  },
+  "PBXBuildFile": {
+    "toOne": [
+      "fileRef",
+      "productRef"
+    ],
+    "toMany": [],
+    "referencesByKeys": []
+  },
+  "PBXBuildRule": {
+    "toOne": [],
+    "toMany": [],
+    "referencesByKeys": []
+  },
+  "PBXContainerItemProxy": {
+    "toOne": [],
+    "toMany": [],
+    "referencesByKeys": []
+  },
+  "PBXCopyFilesBuildPhase": {
+    "toOne": [],
+    "toMany": [
+      "files"
+    ],
+    "referencesByKeys": []
+  },
+  "PBXFileReference": {
+    "toOne": [],
+    "toMany": [],
+    "referencesByKeys": []
+  },
+  "PBXFileSystemSynchronizedBuildFileExceptionSet": {
+    "toOne": [
+      "target"
+    ],
+    "toMany": [],
+    "referencesByKeys": []
+  },
+  "PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet": {
+    "toOne": [
+      "buildPhase"
+    ],
+    "toMany": [],
+    "referencesByKeys": []
+  },
+  "PBXFileSystemSynchronizedRootGroup": {
+    "toOne": [],
+    "toMany": [
+      "exceptions"
+    ],
+    "referencesByKeys": []
+  },
+  "PBXFrameworksBuildPhase": {
+    "toOne": [],
+    "toMany": [
+      "files"
+    ],
+    "referencesByKeys": []
+  },
+  "PBXGroup": {
+    "toOne": [],
+    "toMany": [
+      "children"
+    ],
+    "referencesByKeys": []
+  },
+  "PBXHeadersBuildPhase": {
+    "toOne": [],
+    "toMany": [
+      "files"
+    ],
+    "referencesByKeys": []
+  },
+  "PBXLegacyTarget": {
+    "toOne": [
+      "buildConfigurationList"
+    ],
+    "toMany": [
+      "buildPhases",
+      "dependencies"
+    ],
+    "referencesByKeys": []
+  },
+  "PBXNativeTarget": {
+    "toOne": [
+      "productReference",
+      "buildConfigurationList"
+    ],
+    "toMany": [
+      "buildRules",
+      "packageProductDependencies",
+      "buildPhases",
+      "fileSystemSynchronizedGroups",
+      "dependencies"
+    ],
+    "referencesByKeys": []
+  },
+  "PBXProject": {
+    "toOne": [
+      "buildConfigurationList",
+      "mainGroup",
+      "productRefGroup"
+    ],
+    "toMany": [
+      "targets",
+      "packageReferences"
+    ],
+    "referencesByKeys": [
+      "projectReferences"
+    ]
+  },
+  "PBXReferenceProxy": {
+    "toOne": [
+      "remoteRef"
+    ],
+    "toMany": [],
+    "referencesByKeys": []
+  },
+  "PBXResourcesBuildPhase": {
+    "toOne": [],
+    "toMany": [
+      "files"
+    ],
+    "referencesByKeys": []
+  },
+  "PBXRezBuildPhase": {
+    "toOne": [],
+    "toMany": [
+      "files"
+    ],
+    "referencesByKeys": []
+  },
+  "PBXShellScriptBuildPhase": {
+    "toOne": [],
+    "toMany": [
+      "files"
+    ],
+    "referencesByKeys": []
+  },
+  "PBXSourcesBuildPhase": {
+    "toOne": [],
+    "toMany": [
+      "files"
+    ],
+    "referencesByKeys": []
+  },
+  "PBXTargetDependency": {
+    "toOne": [
+      "target",
+      "targetProxy",
+      "productRef"
+    ],
+    "toMany": [],
+    "referencesByKeys": []
+  },
+  "PBXVariantGroup": {
+    "toOne": [],
+    "toMany": [
+      "children"
+    ],
+    "referencesByKeys": []
+  },
+  "XCBuildConfiguration": {
+    "toOne": [
+      "baseConfigurationReference",
+      "baseConfigurationReferenceAnchor"
+    ],
+    "toMany": [],
+    "referencesByKeys": []
+  },
+  "XCConfigurationList": {
+    "toOne": [],
+    "toMany": [
+      "buildConfigurations"
+    ],
+    "referencesByKeys": []
+  },
+  "XCLocalSwiftPackageReference": {
+    "toOne": [],
+    "toMany": [],
+    "referencesByKeys": []
+  },
+  "XCRemoteSwiftPackageReference": {
+    "toOne": [],
+    "toMany": [],
+    "referencesByKeys": []
+  },
+  "XCSwiftPackageProductDependency": {
+    "toOne": [
+      "package"
+    ],
+    "toMany": [],
+    "referencesByKeys": []
+  },
+  "XCVersionGroup": {
+    "toOne": [
+      "currentVersion"
+    ],
+    "toMany": [
+      "children"
+    ],
+    "referencesByKeys": []
+  }
+}

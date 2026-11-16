@@ -220,6 +220,9 @@ class XCConfigurationList extends AbstractObject {
   List<ObjectList<Object>> get toManyAttributes => [buildConfigurations];
 
   @override
+  List<String> get toManyAttributeKeys => const [_kBuildConfigurations];
+
+  @override
   void clearRelationships() {
     buildConfigurations.clear();
   }

@@ -164,6 +164,9 @@ class PBXFileSystemSynchronizedRootGroup extends AbstractObject {
   List<ObjectList<Object>> get toManyAttributes => [exceptions];
 
   @override
+  List<String> get toManyAttributeKeys => const [_kExceptions];
+
+  @override
   void clearRelationships() {
     exceptions.clear();
   }

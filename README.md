@@ -54,6 +54,25 @@ Future<void> main() async {
 See [example/main.dart](example/main.dart) for a complete end-to-end
 create-project / add-target / add-file / save workflow.
 
+### Predictable UUIDs
+
+`predictabilizeUuids()` replaces every UUID of a machine-generated project with
+the MD5 of the structural path of its object (the output matches Ruby's
+`Project#predictabilize_uuids` byte for byte). Regenerating the project gives
+the same file only if everything the paths are made of is the same, including
+the UUIDs held as strings (`containerPortal`, `remoteGlobalIDString`) of the
+proxies of target dependencies, which are part of the path of a target:
+
+```dart
+final project = await XcodeProject.open('Pods/Pods.xcodeproj');
+project.predictabilizeUuids();
+await project.save();
+```
+
+Files outside the project that refer to its UUIDs are **not** rewritten: the
+`BlueprintIdentifier` of the `BuildableReference`s in `.xcscheme` files keeps
+pointing at the old UUIDs and must be regenerated or updated by the caller.
+
 ## Library API overview
 
 | Type | Purpose |
@@ -64,7 +83,7 @@ create-project / add-target / add-file / save workflow.
 | `XCScheme` | Read and write `.xcscheme` files |
 | `XcConfig` | Read, merge, and write `.xcconfig` files |
 | `Differ` | UUID-agnostic recursive diff between two projects |
-| `UuidGenerator` | Generate uppercase hex UUIDs: random (24 chars) and deterministic from a seed (24 or 32 chars) |
+| `UuidGenerator` | Generate uppercase hex UUIDs: random (24 chars) and deterministic from a seed (24 or 32 chars), and the structural paths `XcodeProject.predictabilizeUuids` derives them from |
 | `Constants` | Xcode file types, product types, SDK versions, and more |
 | `OtherLinkerFlagsParser` | Parse `OTHER_LDFLAGS`-style settings |
 | `PBXNativeTarget` | Native app/framework/library target |
