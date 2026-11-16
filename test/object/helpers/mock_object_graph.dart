@@ -28,6 +28,21 @@ class MockObjectGraph implements ObjectGraph {
     T Function(ObjectGraph, String) factory, {
     String? uuid,
   }) {
+    // Same contract as XcodeProject.newObject, so a test cannot pass here where
+    // the real project would throw.
+    if (uuid != null) {
+      if (!UuidGenerator.isValid(uuid)) {
+        throw ArgumentError.value(uuid, 'uuid', 'not a valid Xcode UUID');
+      }
+      final existing = objectsByUuid[uuid];
+      if (existing != null) {
+        throw ArgumentError.value(
+          uuid,
+          'uuid',
+          'already used by ${existing.isa} in this graph',
+        );
+      }
+    }
     final obj = factory(this, uuid ?? UuidGenerator.generate());
     obj.initializeDefaults();
     return obj;
