@@ -17,6 +17,7 @@ import '../object/isa_registry.dart';
 import '../object/object_graph.dart';
 import '../object/object_list.dart';
 import '../pbx/group.dart';
+import '../pbx/groupable_helper.dart';
 import '../pbx/pbx_file_reference.dart';
 import '../pbx/pbx_native_target.dart';
 import 'file_references_factory.dart';
@@ -134,7 +135,12 @@ class XcodeProject implements ObjectGraph {
     final rootUuid = rootUuidRaw;
     final objectsPlist = (plist['objects'] as Map).cast<String, dynamic>();
 
-    // Deserialize all objects (register-before-configure per ).
+    // Deserialize all objects (register-before-configure per ). The root goes
+    // first so the objects it reaches are registered depth first, as Ruby's
+    // `new_from_plist` does: `objectsByUuid` is iterated in that order (what
+    // `referenceForPath` returns first among duplicates). The ones it does not
+    // reach, which Ruby drops, follow.
+    objectFromPlist(rootUuid, objectsPlist, project);
     for (final uuid in objectsPlist.keys) {
       if (!project.objectsByUuid.containsKey(uuid)) {
         objectFromPlist(uuid, objectsPlist, project);
@@ -368,9 +374,44 @@ class XcodeProject implements ObjectGraph {
   /// All build targets in this project.
   ObjectList<AbstractTarget> get targets => _rootObject!.targets;
 
+  /// The targets of this project that are [PBXNativeTarget]s, in the order of
+  /// [targets]: the aggregate and legacy targets are left out.
+  /// Port of Ruby `Project#native_targets`.
+  List<PBXNativeTarget> get nativeTargets =>
+      targets.whereType<PBXNativeTarget>().toList();
+
   /// All PBXFileReference objects in the project (flat list).
   List<PBXFileReference> get files =>
       objectsByUuid.values.whereType<PBXFileReference>().toList();
+
+  /// The first [PBXFileReference] of the project (in the order of
+  /// [objectsByUuid]: the order Ruby loads them in, depth first from the root)
+  /// whose [GroupableHelper.realPath] is [absolutePath], or `null` if there is
+  /// none. [absolutePath] is compared as it is, as Ruby's `Pathname#==` does:
+  /// it is not normalized (`/a/./b` and `/a/b/` do not match `/a/b`), where the
+  /// real paths have their leading `..` resolved.
+  /// Throws an [ArgumentError] if [absolutePath] is not absolute.
+  /// Port of Ruby `Project#reference_for_path`.
+  PBXFileReference? referenceForPath(String absolutePath) {
+    if (!p.isAbsolute(absolutePath)) {
+      throw ArgumentError.value(
+        absolutePath,
+        'absolutePath',
+        'Paths must be absolute',
+      );
+    }
+    // Ruby's project directory is always absolute (`expand_path`), where
+    // [path] may be relative.
+    final dir = p.normalize(p.absolute(projectDir));
+    return objectsByUuid.values
+        .whereType<PBXFileReference>()
+        .where(
+          (ref) =>
+              GroupableHelper.realPath(ref, this, projectDir: dir) ==
+              absolutePath,
+        )
+        .firstOrNull;
+  }
 
   /// All PBXGroup objects in the project (flat list).
   List<PBXGroup> get groups =>

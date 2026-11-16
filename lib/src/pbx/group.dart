@@ -362,6 +362,111 @@ class PBXGroup extends AbstractObject {
   /// `children.grep(XCVersionGroup)`
   Iterable<XCVersionGroup> get versionGroups =>
       children.whereType<XCVersionGroup>();
+
+  // ---------------------------------------------------------------------------
+  // Lookups
+  // ---------------------------------------------------------------------------
+
+  /// The first file reference among the direct children whose [path] equals
+  /// [path] exactly (it is not a basename, a suffix or a hierarchy path), or
+  /// `null` if there is none. Only [PBXFileReference]s are considered: groups,
+  /// even with the same path, are not.
+  /// Port of `find_file_by_path`.
+  PBXFileReference? findFileByPath(String path) =>
+      files.where((ref) => ref.path == path).firstOrNull;
+
+  /// Walks the children by the names in [path] (`/` separated) and returns the
+  /// object it ends at, or `null` if a name is not found. With [create] a
+  /// [PBXGroup] named after each missing name is added (`<group>` source tree,
+  /// no path) instead. A `null` [path] returns this group.
+  ///
+  /// Each name is matched, among the children, against the name Ruby calls
+  /// `display_name` (a group: its [name], else the basename of its [path]; the
+  /// other objects: [displayName]) and the first child that matches wins, so
+  /// with duplicated names the first one is returned; files, variant groups and
+  /// proxies match like groups and may be returned, which is why the result is
+  /// an [AbstractObject]. Names are not trimmed or normalized: `''`, a leading
+  /// `/` or `//` give empty names, a trailing `/` is ignored, as with Ruby's
+  /// `String#split('/')`. A path that is empty (`''`, `'/'`) looks for a group
+  /// with neither name nor path (creating one with [create]).
+  ///
+  /// Throws a [StateError], where Ruby raises a `NoMethodError`, if a name
+  /// that is not the last one resolves to something that is not a group (a
+  /// file): nothing is created for the names after it. The array form of
+  /// Ruby's [path] is not supported.
+  ///
+  /// Port of `find_subpath(path, should_create)`.
+  AbstractObject? findSubpath(String? path, {bool create = false}) {
+    if (path == null) return this;
+    // `''.split('/')` is empty in Ruby: the one name looked for is `nil`.
+    final names = _splitPath(path);
+    if (names.isEmpty) names.add(null);
+
+    PBXGroup current = this;
+    for (var i = 0; i < names.length; i++) {
+      final name = names[i];
+      var child = current.children
+          .where((c) => _lookupName(c) == name)
+          .firstOrNull;
+      if (child == null) {
+        if (!create) return null;
+        child = current._newGroup(name);
+      }
+      if (i == names.length - 1) return child;
+      if (child is! PBXGroup) {
+        throw StateError(
+          'findSubpath: "${_lookupName(child)}" is a ${child.isa}, not a '
+          'group, so it has no "${names[i + 1]}" child',
+        );
+      }
+      current = child;
+    }
+    return current; // unreachable: [names] is never empty.
+  }
+
+  /// `path.split('/')` as Ruby does it: empty strings at the end are dropped.
+  static List<String?> _splitPath(String path) {
+    final names = <String?>[...path.split('/')];
+    while (names.isNotEmpty && names.last == '') {
+      names.removeLast();
+    }
+    return names;
+  }
+
+  /// The name Ruby's `find_subpath` matches [object] against. Ruby's
+  /// `PBXGroup#display_name` is `nil` for a group with neither name nor path
+  /// (where [PBXGroup.displayName] falls back to `Group`).
+  static String? _lookupName(AbstractObject object) {
+    if (object is PBXGroup) {
+      return object.name ??
+          (object.path != null ? p.basename(object.path!) : null);
+    }
+    return object.displayName;
+  }
+
+  /// Adds a new group named [name] to the children.
+  /// Port of `new_group(name)`.
+  PBXGroup _newGroup(String? name) {
+    final group = project.newObject((g, u) => PBXGroup(g, u));
+    group.name = name;
+    group.sourceTree = '<group>';
+    group.path = null;
+    children.add(group);
+    return group;
+  }
+
+  /// The children of this group and, recursively, of its child groups
+  /// (variant and version groups included), each child followed by its own
+  /// descendants (depth first, in the order of [children]).
+  /// Port of `recursive_children`.
+  List<AbstractObject> get recursiveChildren {
+    final result = <AbstractObject>[];
+    for (final child in children) {
+      result.add(child);
+      if (child is PBXGroup) result.addAll(child.recursiveChildren);
+    }
+    return result;
+  }
 }
 
 // =============================================================================
