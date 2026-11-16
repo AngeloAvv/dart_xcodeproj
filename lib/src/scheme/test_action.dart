@@ -13,6 +13,9 @@ import 'xml_element_wrapper.dart';
 class TestAction extends AbstractSchemeAction {
   static const String _tag = 'TestAction';
 
+  /// Wraps [el], or creates a default `<TestAction>` when [el] is omitted (`Debug`, with an empty `Testables`).
+  ///
+  /// Throws an [ArgumentError] if [el] is not a `<TestAction>` element.
   TestAction([XmlElement? el]) {
     createXmlElementWithFallback(el, _tag, () {
       buildConfiguration = 'Debug';
@@ -34,12 +37,19 @@ class TestAction extends AbstractSchemeAction {
   // Attributes
   // ---------------------------------------------------------------------------
 
+  /// Whether this action uses the arguments and environment variables of the
+  /// launch action.
+  ///
+  /// A missing attribute reads as `false`.
   bool get shouldUseLaunchSchemeArgsEnv => stringToBool(
     xmlElement.getAttribute('shouldUseLaunchSchemeArgsEnv') ?? 'NO',
   );
   set shouldUseLaunchSchemeArgsEnv(bool v) =>
       xmlElement.setAttribute('shouldUseLaunchSchemeArgsEnv', boolToString(v));
 
+  /// Whether code coverage is gathered while testing.
+  ///
+  /// A missing attribute reads as `false`.
   bool get codeCoverageEnabled =>
       stringToBool(xmlElement.getAttribute('codeCoverageEnabled') ?? 'NO');
   set codeCoverageEnabled(bool v) =>

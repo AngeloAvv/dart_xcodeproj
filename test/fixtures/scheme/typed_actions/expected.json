@@ -1,0 +1,313 @@
+{
+  "ios_Runner": {
+    "build": {
+      "preActionTypes": [
+        "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction"
+      ],
+      "postActionTypes": null,
+      "parallelizeBuildables": true,
+      "buildImplicitDependencies": true,
+      "entriesCount": 1,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "test": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Debug",
+      "shouldUseLaunchSchemeArgsEnv": true,
+      "codeCoverageEnabled": "raises",
+      "testablesCount": 1,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "launch": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Debug",
+      "allowLocationSimulation": true,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "profile": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Profile",
+      "shouldUseLaunchSchemeArgsEnv": true,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "analyze": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Debug",
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "archive": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Release",
+      "revealArchiveInOrganizer": true,
+      "customArchiveName": null,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    }
+  },
+  "macos_Runner": {
+    "build": {
+      "preActionTypes": [
+        "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction"
+      ],
+      "postActionTypes": null,
+      "parallelizeBuildables": true,
+      "buildImplicitDependencies": true,
+      "entriesCount": 1,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "test": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Debug",
+      "shouldUseLaunchSchemeArgsEnv": true,
+      "codeCoverageEnabled": "raises",
+      "testablesCount": 1,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "launch": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Debug",
+      "allowLocationSimulation": true,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "profile": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Profile",
+      "shouldUseLaunchSchemeArgsEnv": true,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "analyze": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Debug",
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "archive": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Release",
+      "revealArchiveInOrganizer": true,
+      "customArchiveName": null,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    }
+  },
+  "missing_actions": {
+    "build": {
+      "preActionTypes": [
+        "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction"
+      ],
+      "postActionTypes": null,
+      "parallelizeBuildables": true,
+      "buildImplicitDependencies": true,
+      "entriesCount": 1,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "test": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Debug",
+      "shouldUseLaunchSchemeArgsEnv": true,
+      "codeCoverageEnabled": "raises",
+      "testablesCount": 0,
+      "inDocumentBefore": false,
+      "inDocumentAfter": false,
+      "sameObjectOnSecondCall": true
+    },
+    "launch": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Debug",
+      "allowLocationSimulation": true,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "profile": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Release",
+      "shouldUseLaunchSchemeArgsEnv": true,
+      "inDocumentBefore": false,
+      "inDocumentAfter": false,
+      "sameObjectOnSecondCall": true
+    },
+    "analyze": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Debug",
+      "inDocumentBefore": false,
+      "inDocumentAfter": false,
+      "sameObjectOnSecondCall": true
+    },
+    "archive": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Release",
+      "revealArchiveInOrganizer": true,
+      "customArchiveName": null,
+      "inDocumentBefore": false,
+      "inDocumentAfter": false,
+      "sameObjectOnSecondCall": true
+    }
+  },
+  "repeated_actions": {
+    "build": {
+      "preActionTypes": [
+        "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction"
+      ],
+      "postActionTypes": null,
+      "parallelizeBuildables": true,
+      "buildImplicitDependencies": true,
+      "entriesCount": 1,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "test": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Debug",
+      "shouldUseLaunchSchemeArgsEnv": true,
+      "codeCoverageEnabled": "raises",
+      "testablesCount": 1,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "launch": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Debug",
+      "allowLocationSimulation": true,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "profile": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Profile",
+      "shouldUseLaunchSchemeArgsEnv": true,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "analyze": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Debug",
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "archive": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Release",
+      "revealArchiveInOrganizer": true,
+      "customArchiveName": null,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    }
+  },
+  "pre_post_actions": {
+    "build": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "parallelizeBuildables": true,
+      "buildImplicitDependencies": true,
+      "entriesCount": null,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "test": {
+      "preActionTypes": null,
+      "postActionTypes": [
+        "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction"
+      ],
+      "buildConfiguration": "Debug-dev",
+      "shouldUseLaunchSchemeArgsEnv": false,
+      "codeCoverageEnabled": true,
+      "testablesCount": 0,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "launch": {
+      "preActionTypes": [
+        "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction"
+      ],
+      "postActionTypes": null,
+      "buildConfiguration": "Debug-dev",
+      "allowLocationSimulation": false,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "profile": {
+      "preActionTypes": [
+        "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.SendEmailAction"
+      ],
+      "postActionTypes": null,
+      "buildConfiguration": "Profile-dev",
+      "shouldUseLaunchSchemeArgsEnv": false,
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "analyze": {
+      "preActionTypes": null,
+      "postActionTypes": null,
+      "buildConfiguration": "Debug-dev",
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    },
+    "archive": {
+      "preActionTypes": null,
+      "postActionTypes": [
+        "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction"
+      ],
+      "buildConfiguration": "Release-dev",
+      "revealArchiveInOrganizer": false,
+      "customArchiveName": "My Archive",
+      "inDocumentBefore": true,
+      "inDocumentAfter": true,
+      "sameObjectOnSecondCall": true
+    }
+  }
+}

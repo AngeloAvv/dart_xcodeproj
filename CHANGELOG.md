@@ -8,6 +8,7 @@
 - `PBXReferenceProxy` annotates `path` by its basename, `XCConfigurationList` reads `Build configuration list for <isa> "<name>"` from its owner, and `XCBuildConfiguration.displayName` is its `name`
 - `PBXTargetDependency.displayName` falls back to the proxy's `remoteInfo` (a dependency on a target of another project), and `PBXBuildRule.displayName` is its `name`, like Ruby's `display_name`
 - A new `PBXShellScriptBuildPhase` has Ruby's placeholder script (`# Type a script or drag a script file from your workspace to insert its path.`) instead of `# Type a script...`
+- `XCScheme.buildAction`, `testAction`, `launchAction`, `profileAction`, `analyzeAction` and `archiveAction` no longer add an element to the document when the scheme lacks it. Like Ruby's `XCScheme#launch_action` and friends they return a default action that is not saved until it is assigned, and the same instance on every call, so reading a getter never changes what `save` writes. Code that relied on the getter attaching the missing element must now assign it (`scheme.testAction = scheme.testAction`)
 
 ### Features
 
@@ -20,6 +21,7 @@
 - `PBXNativeTarget.addFileReferences(refs, {compilerFlags, onBuildFile})` adds a build file per reference to the sources phase, or to the headers phase for a header extension (any case), reusing the build file a reference already has. A non-empty `compilerFlags` is appended, after a space, to the `COMPILER_FLAGS` of the build file of a source file (even when they repeat, like Ruby) and `onBuildFile` stands for Ruby's block. A reference without a `path` throws an `ArgumentError` before anything is added, where Ruby raises a `TypeError` midway. `PBXNativeTarget.addResources(refs)` does the same for the resources phase, skipping references it already has. Neither creates a phase when given no reference
 - `AbstractTarget.shellScriptBuildPhases` and `copyFilesBuildPhases` list the phases of that class, `newShellScriptBuildPhase([name])` and `newCopyFilesBuildPhase([name])` append a new one to `buildPhases` (a new phase every time) and `buildConfigurations` returns the configurations of the target's configuration list (a `StateError` when it has none). The output on the Flutter iOS and macOS projects is byte-identical to xcodeproj's
 - `UuidGenerator.structuralPaths` returns the structural path of every object of a project, and `AbstractObject.toManyAttributeKeys` / `referencesByKeysAttributeKeys` expose the plist keys those paths are made of
+- `XCScheme.buildAction`, `testAction`, `launchAction`, `profileAction`, `analyzeAction` and `archiveAction` now have setters, like Ruby's `XCScheme#launch_action=` and friends: the first existing element is removed and the action is appended to `<Scheme>` (a copy, if it already belongs to a document). The getters return the typed actions, so `scheme.launchAction.buildConfiguration = 'Debug-dev'` changes only that attribute and keeps every other attribute, `PreActions`/`PostActions` and unknown child element as they were.
 
 ## 0.3.0
 
