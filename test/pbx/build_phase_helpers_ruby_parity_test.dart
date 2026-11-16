@@ -60,6 +60,14 @@ final Map<String, void Function(XcodeProject)> _scenarios = {
     target.addFileReferences([fooH], compilerFlags: '-fobjc-arc');
     bareTarget(project).addFileReferences([swift]);
   },
+  'new_phases': (project) {
+    final target = _runner(project);
+    target.newShellScriptBuildPhase('Run Foo').shellScript = 'echo foo';
+    target.newShellScriptBuildPhase();
+    target.newCopyFilesBuildPhase('Copy Foo');
+    target.newCopyFilesBuildPhase();
+    bareTarget(project).newShellScriptBuildPhase('Only');
+  },
   'add_resources': (project) {
     final target = _runner(project);
     final first = project.newFile('Runner/Assets/a.png');

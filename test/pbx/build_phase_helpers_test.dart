@@ -22,6 +22,16 @@ PBXNativeTarget _target(XcodeProject project, String name) => project.targets
     .whereType<PBXNativeTarget>()
     .firstWhere((t) => t.name == name);
 
+/// The names of the shell script and copy files phases of `Runner`, in order.
+const _shellScriptNames = {
+  'ios': ['Run Script', 'Thin Binary'],
+  'macos': [null],
+};
+const _copyFilesNames = {
+  'ios': ['Embed Frameworks'],
+  'macos': ['Bundle Framework'],
+};
+
 void main() {
   for (final name in ['ios', 'macos']) {
     group('$name project:', () {
@@ -67,6 +77,115 @@ void main() {
 
           expect(bare.buildPhases.toList(), [phase]);
           expect(bare.resourcesBuildPhase, same(phase));
+        });
+      });
+
+      group('buildConfigurations', () {
+        test('are those of the configuration list of the target', () {
+          expect(
+            runner.buildConfigurations,
+            same(runner.buildConfigurationList!.buildConfigurations),
+          );
+          expect(runner.buildConfigurations.map((c) => c.name), [
+            'Debug',
+            'Release',
+            'Profile',
+          ]);
+        });
+
+        test('throw a StateError for a target without a list', () {
+          final bare = project.newObject((g, u) => PBXAggregateTarget(g, u));
+
+          expect(() => bare.buildConfigurations, throwsStateError);
+        });
+      });
+
+      group('shellScriptBuildPhases', () {
+        test('are the shell script phases of the target, in order', () {
+          expect(
+            runner.shellScriptBuildPhases.map((p) => p.name),
+            _shellScriptNames[name],
+          );
+        });
+
+        test('are empty for a target without any', () {
+          expect(bareTarget(project).shellScriptBuildPhases, isEmpty);
+        });
+      });
+
+      group('copyFilesBuildPhases', () {
+        test('are the copy files phases of the target, in order', () {
+          expect(
+            runner.copyFilesBuildPhases.map((p) => p.name),
+            _copyFilesNames[name],
+          );
+        });
+      });
+
+      group('newShellScriptBuildPhase', () {
+        test('appends a named phase with the default script', () {
+          final before = runner.buildPhases.toList();
+
+          final phase = runner.newShellScriptBuildPhase('Run Foo');
+
+          expect(runner.buildPhases.toList(), [...before, phase]);
+          expect(phase.name, 'Run Foo');
+          expect(phase.shellPath, '/bin/sh');
+          expect(
+            phase.shellScript,
+            '# Type a script or drag a script file from your workspace to '
+            'insert its path.\n',
+          );
+          expect(phase.files, isEmpty);
+          expect(phase.referrers, contains(runner));
+          expect(runner.shellScriptBuildPhases.last, same(phase));
+        });
+
+        test('appends a nameless phase', () {
+          final phase = runner.newShellScriptBuildPhase();
+
+          expect(phase.name, isNull);
+          expect(phase.displayName, 'ShellScript');
+        });
+
+        test('appends a new phase every time', () {
+          final first = runner.newShellScriptBuildPhase('Run Foo');
+          final second = runner.newShellScriptBuildPhase('Run Foo');
+
+          expect(second, isNot(same(first)));
+          expect(runner.shellScriptBuildPhases, containsAll([first, second]));
+        });
+
+        test('works on any target, as in Ruby', () {
+          final aggregate = project.newObject(
+            (g, u) => PBXAggregateTarget(g, u),
+          );
+
+          final phase = aggregate.newShellScriptBuildPhase('Only');
+
+          expect(aggregate.buildPhases.toList(), [phase]);
+        });
+      });
+
+      group('newCopyFilesBuildPhase', () {
+        test('appends a named phase copying to the resources', () {
+          final before = runner.buildPhases.toList();
+
+          final phase = runner.newCopyFilesBuildPhase('Copy Foo');
+
+          expect(runner.buildPhases.toList(), [...before, phase]);
+          expect(phase.name, 'Copy Foo');
+          expect(phase.dstSubfolderSpec, '7');
+          expect(phase.dstPath, '');
+          expect(phase.referrers, contains(runner));
+          expect(runner.copyFilesBuildPhases.last, same(phase));
+        });
+
+        test('appends a nameless phase', () {
+          final phase = runner.newCopyFilesBuildPhase();
+
+          expect(phase.name, isNull);
+          expect(phase.displayName, 'CopyFiles');
         });
       });
 

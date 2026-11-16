@@ -7,6 +7,7 @@ import 'pbx_build_phase.dart';
 import 'pbx_container_item_proxy.dart';
 import 'pbx_file_reference.dart';
 import 'pbx_target_dependency.dart';
+import 'xc_build_configuration.dart';
 import 'xc_configuration_list.dart';
 import 'xc_swift_package_product_dependency.dart';
 
@@ -240,6 +241,60 @@ abstract class AbstractTarget extends AbstractObject {
     buildConfigurationList = null;
     buildPhases.clear();
     dependencies.clear();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build configuration and build phase helpers
+  // ---------------------------------------------------------------------------
+
+  /// The build configurations of the target (commonly `Debug` and `Release`),
+  /// those of its [buildConfigurationList].
+  /// Throws a [StateError] when the target has no configuration list (Ruby
+  /// raises a `NoMethodError`).
+  /// Port of `AbstractTarget#build_configurations`.
+  ObjectList<XCBuildConfiguration> get buildConfigurations {
+    final list = buildConfigurationList;
+    if (list == null) {
+      throw StateError('Target "$displayName" has no build configuration list');
+    }
+    return list.buildConfigurations;
+  }
+
+  /// The shell script build phases of the target, in the order of
+  /// [buildPhases].
+  /// Port of `AbstractTarget#shell_script_build_phases`.
+  List<PBXShellScriptBuildPhase> get shellScriptBuildPhases =>
+      buildPhases.whereType<PBXShellScriptBuildPhase>().toList();
+
+  /// The copy files build phases of the target, in the order of
+  /// [buildPhases].
+  /// Port of `AbstractTarget#copy_files_build_phases`.
+  List<PBXCopyFilesBuildPhase> get copyFilesBuildPhases =>
+      buildPhases.whereType<PBXCopyFilesBuildPhase>().toList();
+
+  /// Appends a new copy files build phase named [name] (optional) to
+  /// [buildPhases] and returns it. It copies to the resources folder until
+  /// [PBXCopyFilesBuildPhase.dstSubfolderSpec] says otherwise.
+  /// Unlike [PBXNativeTarget.sourceBuildPhase] and its siblings, a target can
+  /// have many of these: a new phase is created every time.
+  /// Port of `AbstractTarget#new_copy_files_build_phase`.
+  PBXCopyFilesBuildPhase newCopyFilesBuildPhase([String? name]) {
+    final phase = project.newObject((g, u) => PBXCopyFilesBuildPhase(g, u))
+      ..name = name;
+    buildPhases.add(phase);
+    return phase;
+  }
+
+  /// Appends a new shell script build phase named [name] (optional) to
+  /// [buildPhases] and returns it, with the default `/bin/sh` and
+  /// placeholder script: set [PBXShellScriptBuildPhase.shellScript]
+  /// to make it do something. A new phase is created every time.
+  /// Port of `AbstractTarget#new_shell_script_build_phase`.
+  PBXShellScriptBuildPhase newShellScriptBuildPhase([String? name]) {
+    final phase = project.newObject((g, u) => PBXShellScriptBuildPhase(g, u))
+      ..name = name;
+    buildPhases.add(phase);
+    return phase;
   }
 
   // ---------------------------------------------------------------------------
