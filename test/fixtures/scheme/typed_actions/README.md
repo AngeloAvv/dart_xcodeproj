@@ -44,6 +44,11 @@ File.write('<name>.replaced_launch.ruby_saved.xcscheme', scheme.to_s)
 scheme = Xcodeproj::XCScheme.new(path)
 scheme.analyze_action = AnalyzeAction.new # with build_configuration = 'Custom'
 File.write('<name>.replaced_analyze.ruby_saved.xcscheme', scheme.to_s)
+
+scheme = Xcodeproj::XCScheme.new('repeated_actions.xcscheme')
+second = LaunchAction.new(scheme.doc.root.get_elements('LaunchAction')[1])
+scheme.launch_action = second
+File.write('repeated_actions.moved_second_launch.ruby_saved.xcscheme', scheme.to_s)
 ```
 
 ## What the expectations say about Ruby
@@ -56,3 +61,6 @@ File.write('<name>.replaced_analyze.ruby_saved.xcscheme', scheme.to_s)
 - A boolean attribute that is absent makes the reader raise
   (`"raises"` in `expected.json`; Dart answers `false`).
 - A repeated action element is not an error: the getter uses the first one.
+- Assigning an element that is already a child of `<Scheme>` (the second of
+  two `LaunchAction`s) does not move it: REXML adds it again, so the output
+  has it twice. Dart copies the element, which gives the same file.

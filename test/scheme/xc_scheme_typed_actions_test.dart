@@ -16,6 +16,7 @@ import 'package:dart_xcodeproj/src/scheme/profile_action.dart';
 import 'package:dart_xcodeproj/src/scheme/test_action.dart';
 import 'package:dart_xcodeproj/src/scheme/xc_scheme.dart';
 import 'package:test/test.dart';
+import 'package:xml/xml.dart';
 
 const _dir = 'test/fixtures/scheme/typed_actions';
 
@@ -244,6 +245,27 @@ void main() {
     }
   });
 
+  group('reading', () {
+    for (final fixture in [
+      _fixtures['ios_Runner']!,
+      _fixtures['macos_Runner']!,
+      _fixtures['pre_post_actions']!,
+    ]) {
+      test('$fixture: every getter then save is byte-identical', () async {
+        final scheme = await XCScheme.open(fixture);
+
+        scheme.buildAction.preActions;
+        scheme.testAction.postActions;
+        scheme.launchAction.buildConfiguration;
+        scheme.profileAction.buildConfiguration;
+        scheme.analyzeAction.buildConfiguration;
+        scheme.archiveAction.buildConfiguration;
+
+        expect(await saved(scheme), equals(await File(fixture).readAsString()));
+      });
+    }
+  });
+
   group('editing buildConfiguration', () {
     for (final entry in _fixtures.entries) {
       test('${entry.key}: launchAction matches what Ruby saves', () async {
@@ -360,6 +382,25 @@ void main() {
         );
       });
     }
+
+    test('assigning a repeated element of the scheme matches Ruby', () async {
+      // REXML does not unparent the element: Ruby ends up with it twice.
+      final scheme = await XCScheme.open(_fixtures['repeated_actions']!);
+      final second = LaunchAction(
+        scheme.document.rootElement.findElements('LaunchAction').last,
+      );
+
+      scheme.launchAction = second;
+
+      expect(
+        await saved(scheme),
+        equals(
+          await File(
+            '$_dir/repeated_actions.moved_second_launch.ruby_saved.xcscheme',
+          ).readAsString(),
+        ),
+      );
+    });
 
     test('every action can be assigned', () async {
       final scheme = XCScheme.create();

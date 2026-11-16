@@ -10,7 +10,7 @@ class ArchiveAction extends AbstractSchemeAction {
 
   /// Wraps [el], or creates a default `<ArchiveAction>` when [el] is omitted (`Release`, revealed in the Organizer).
   ///
-  /// Throws an [ArgumentError] if [el] is not a `<ArchiveAction>` element.
+  /// Throws an [ArgumentError] if [el] is not an `<ArchiveAction>` element.
   ArchiveAction([XmlElement? el]) {
     createXmlElementWithFallback(el, _tag, () {
       buildConfiguration = 'Release';

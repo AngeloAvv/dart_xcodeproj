@@ -137,7 +137,7 @@ class XCScheme {
   }
 
   // ---------------------------------------------------------------------------
-  // Lazy action element accessors
+  // Action element accessors
   // ---------------------------------------------------------------------------
 
   /// Returns the `<BuildAction>` element, or `null` if not present.
@@ -229,7 +229,7 @@ class XCScheme {
   /// is appended as the last child of `<Scheme>`. If [action] already belongs
   /// to a document, a copy of its element is inserted.
   set buildAction(BuildAction action) {
-    _replaceChild(buildActionElement, action.xmlElement);
+    _replaceAction(buildActionElement, action.xmlElement);
     _detachedBuildAction = null;
   }
 
@@ -251,7 +251,7 @@ class XCScheme {
   /// is appended as the last child of `<Scheme>`. If [action] already belongs
   /// to a document, a copy of its element is inserted.
   set testAction(TestAction action) {
-    _replaceChild(testActionElement, action.xmlElement);
+    _replaceAction(testActionElement, action.xmlElement);
     _detachedTestAction = null;
   }
 
@@ -273,7 +273,7 @@ class XCScheme {
   /// is appended as the last child of `<Scheme>`. If [action] already belongs
   /// to a document, a copy of its element is inserted.
   set launchAction(LaunchAction action) {
-    _replaceChild(launchActionElement, action.xmlElement);
+    _replaceAction(launchActionElement, action.xmlElement);
     _detachedLaunchAction = null;
   }
 
@@ -295,7 +295,7 @@ class XCScheme {
   /// one is appended as the last child of `<Scheme>`. If [action] already
   /// belongs to a document, a copy of its element is inserted.
   set profileAction(ProfileAction action) {
-    _replaceChild(profileActionElement, action.xmlElement);
+    _replaceAction(profileActionElement, action.xmlElement);
     _detachedProfileAction = null;
   }
 
@@ -317,7 +317,7 @@ class XCScheme {
   /// one is appended as the last child of `<Scheme>`. If [action] already
   /// belongs to a document, a copy of its element is inserted.
   set analyzeAction(AnalyzeAction action) {
-    _replaceChild(analyzeActionElement, action.xmlElement);
+    _replaceAction(analyzeActionElement, action.xmlElement);
     _detachedAnalyzeAction = null;
   }
 
@@ -339,11 +339,11 @@ class XCScheme {
   /// one is appended as the last child of `<Scheme>`. If [action] already
   /// belongs to a document, a copy of its element is inserted.
   set archiveAction(ArchiveAction action) {
-    _replaceChild(archiveActionElement, action.xmlElement);
+    _replaceAction(archiveActionElement, action.xmlElement);
     _detachedArchiveAction = null;
   }
 
-  void _replaceChild(XmlElement? existing, XmlElement replacement) {
+  void _replaceAction(XmlElement? existing, XmlElement replacement) {
     existing?.remove();
     document.rootElement.children.add(
       replacement.parent == null ? replacement : replacement.copy(),

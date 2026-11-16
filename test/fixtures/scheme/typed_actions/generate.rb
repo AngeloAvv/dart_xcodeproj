@@ -18,7 +18,9 @@
 # - <name>.replaced_launch.ruby_saved.xcscheme and
 #   <name>.replaced_analyze.ruby_saved.xcscheme: the scheme saved after
 #   `launch_action = LaunchAction.new` / `analyze_action = AnalyzeAction.new`
-#   with a `buildConfiguration` of 'Custom'.
+#   with a `buildConfiguration` of 'Custom';
+# - repeated_actions.moved_second_launch.ruby_saved.xcscheme: the scheme
+#   saved after assigning its own second LaunchAction to `launch_action=`.
 gem 'xcodeproj', '1.27.0'
 require 'json'
 require 'xcodeproj'
@@ -112,5 +114,10 @@ inputs.each do |name, path|
   replaced.analyze_action = analyze
   File.write(File.join(dir, "#{name}.replaced_analyze.ruby_saved.xcscheme"), replaced.to_s)
 end
+
+moved = Xcodeproj::XCScheme.new(inputs['repeated_actions'])
+second = Xcodeproj::XCScheme::LaunchAction.new(moved.doc.root.get_elements('LaunchAction')[1])
+moved.launch_action = second
+File.write(File.join(dir, 'repeated_actions.moved_second_launch.ruby_saved.xcscheme'), moved.to_s)
 
 File.write(File.join(dir, 'expected.json'), "#{JSON.pretty_generate(expected)}\n")

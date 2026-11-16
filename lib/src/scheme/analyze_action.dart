@@ -10,7 +10,7 @@ class AnalyzeAction extends AbstractSchemeAction {
 
   /// Wraps [el], or creates a default `<AnalyzeAction>` when [el] is omitted (`Debug`).
   ///
-  /// Throws an [ArgumentError] if [el] is not a `<AnalyzeAction>` element.
+  /// Throws an [ArgumentError] if [el] is not an `<AnalyzeAction>` element.
   AnalyzeAction([XmlElement? el]) {
     createXmlElementWithFallback(el, _tag, () {
       buildConfiguration = 'Debug';
