@@ -106,6 +106,16 @@ class PBXBuildRule extends AbstractObject {
   @override
   String get asciiPlistAnnotation => ' PBXBuildRule ';
 
+  /// The [name], unless it is missing or empty.
+  /// Port of `display_name`.
+  @override
+  String get displayName {
+    final declared = name;
+    return declared != null && declared.isNotEmpty
+        ? declared
+        : super.displayName;
+  }
+
   @override
   void initializeDefaults() {
     isEditable = '1';

@@ -307,4 +307,22 @@ void main() {
       expect(keys.first, equals('isa'));
     });
   });
+
+  group('PBXBuildRule displayName', () {
+    test('is its name', () {
+      final rule = graph.newObject((g, u) => PBXBuildRule(g, u))
+        ..name = 'Process';
+      expect(rule.displayName, equals('Process'));
+    });
+
+    test('is the isa without its prefix when it has no name', () {
+      final rule = graph.newObject((g, u) => PBXBuildRule(g, u));
+      expect(rule.displayName, equals('BuildRule'));
+    });
+
+    test('is the isa without its prefix when its name is empty', () {
+      final rule = graph.newObject((g, u) => PBXBuildRule(g, u))..name = '';
+      expect(rule.displayName, equals('BuildRule'));
+    });
+  });
 }
