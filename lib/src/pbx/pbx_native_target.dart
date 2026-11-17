@@ -255,20 +255,29 @@ abstract class AbstractTarget extends AbstractObject {
   /// Throws a [StateError] when the target has no configuration list (Ruby
   /// raises a `NoMethodError`).
   /// Port of `AbstractTarget#build_configurations`.
-  ObjectList<XCBuildConfiguration> get buildConfigurations {
+  ObjectList<XCBuildConfiguration> get buildConfigurations =>
+      _requiredConfigurationList.buildConfigurations;
+
+  /// The [buildConfigurationList], or a [StateError] where Ruby would raise a
+  /// `NoMethodError` on `nil`.
+  XCConfigurationList get _requiredConfigurationList {
     final list = buildConfigurationList;
     if (list == null) {
       throw StateError('Target "$displayName" has no build configuration list');
     }
-    return list.buildConfigurations;
+    return list;
   }
 
   /// The SDK the target uses: its `SDKROOT` setting, resolved against the
-  /// project's, or `null` when it has none.
+  /// project's, or `null` when it has none (or when it is not a string, as an
+  /// array: Ruby then finds no platform either).
   /// Throws a [StateError] when the configurations disagree
   /// (see [commonResolvedBuildSetting]).
   /// Port of `AbstractTarget#sdk`.
-  String? get sdk => commonResolvedBuildSetting('SDKROOT') as String?;
+  String? get sdk {
+    final value = commonResolvedBuildSetting('SDKROOT');
+    return value is String ? value : null;
+  }
 
   /// The name of the platform of the target, one of `ios`, `osx`, `tvos`,
   /// `visionos` and `watchos` (the symbols of Ruby as strings), or `null`
@@ -305,7 +314,8 @@ abstract class AbstractTarget extends AbstractObject {
   String? get deploymentTarget {
     final setting = deploymentTargetSettingByPlatformName[platformName];
     if (setting == null) return null;
-    return commonResolvedBuildSetting(setting) as String?;
+    final value = commonResolvedBuildSetting(setting);
+    return value is String ? value : null;
   }
 
   /// The build settings of the configuration named [buildConfigurationName],
@@ -315,13 +325,8 @@ abstract class AbstractTarget extends AbstractObject {
   /// Throws a [StateError] when the target has no configuration list (Ruby
   /// raises a `NoMethodError`).
   /// Port of `AbstractTarget#build_settings`.
-  Map<String, dynamic>? buildSettings(String buildConfigurationName) {
-    final list = buildConfigurationList;
-    if (list == null) {
-      throw StateError('Target "$displayName" has no build configuration list');
-    }
-    return list.buildSettings(buildConfigurationName);
-  }
+  Map<String, dynamic>? buildSettings(String buildConfigurationName) =>
+      _requiredConfigurationList.buildSettings(buildConfigurationName);
 
   /// Adds a build configuration named [name] to the target and fills it with
   /// the default build settings of a [type] configuration for the target's
@@ -340,13 +345,12 @@ abstract class AbstractTarget extends AbstractObject {
     String name,
     BuildConfigType type,
   ) {
-    final list = buildConfigurationList;
-    if (list == null) {
-      throw StateError('Target "$displayName" has no build configuration list');
-    }
+    final list = _requiredConfigurationList;
     final existing = list[name];
     if (existing != null) return existing;
 
+    // `self` for the type promotion of the product type, which only native
+    // targets have (Ruby: `respond_to?(:product_type)`).
     final self = this;
     final productTypeUti = self is PBXNativeTarget ? self.productType : null;
     final settings = ProjectHelper.commonBuildSettings(

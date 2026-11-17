@@ -256,29 +256,26 @@ class ProjectHelper {
       }
     }
 
-    if (deploymentTarget != null) {
-      switch (platform) {
-        case 'ios':
-          result['IPHONEOS_DEPLOYMENT_TARGET'] = deploymentTarget;
-          if (deploymentTarget.compareTo('5') < 0) {
-            result['CLANG_ENABLE_OBJC_WEAK'] = 'NO';
-          }
-        case 'osx':
-          result['MACOSX_DEPLOYMENT_TARGET'] = deploymentTarget;
-          if (deploymentTarget.compareTo('10.7') < 0) {
-            result['CLANG_ENABLE_OBJC_WEAK'] = 'NO';
-          }
-        case 'tvos':
-          result['TVOS_DEPLOYMENT_TARGET'] = deploymentTarget;
-        case 'visionos':
-          result['XROS_DEPLOYMENT_TARGET'] = deploymentTarget;
-        case 'watchos':
-          result['WATCHOS_DEPLOYMENT_TARGET'] = deploymentTarget;
+    final deploymentTargetSetting =
+        AbstractTarget.deploymentTargetSettingByPlatformName[platform];
+    if (deploymentTarget != null && deploymentTargetSetting != null) {
+      result[deploymentTargetSetting] = deploymentTarget;
+      // Ruby compares the versions as strings: '13.0' < '5'.
+      final weakBelow = _objcWeakBelowByPlatform[platform];
+      if (weakBelow != null && deploymentTarget.compareTo(weakBelow) < 0) {
+        result['CLANG_ENABLE_OBJC_WEAK'] = 'NO';
       }
     }
 
     return result;
   }
+
+  /// The deployment target below which (as a string) a platform has no weak
+  /// references in Objective-C.
+  static const Map<String, String> _objcWeakBelowByPlatform = {
+    'ios': '5',
+    'osx': '10.7',
+  };
 
   /// A deep copy of [settings]: maps and lists are copied, scalars shared.
   /// Port of `ProjectHelper.deep_dup`.

@@ -85,6 +85,17 @@ void main() {
           expect(runner.deploymentTarget, equals('9.0'));
         });
 
+        test('find no platform for an SDKROOT that is not a string', () {
+          runner.buildConfigurationList!.setSetting('SDKROOT', ['iphoneos']);
+          for (final config in project.buildConfigurations) {
+            config.buildSettings['SDKROOT'] = ['iphoneos'];
+          }
+
+          expect(runner.sdk, isNull);
+          expect(runner.platformName, isNull);
+          expect(runner.deploymentTarget, isNull);
+        });
+
         test('count a configuration only the project has, like Ruby', () {
           // Ruby merges the project settings into the target ones, so the
           // `Profile` of the project (SDKROOT iphoneos) is part of the result
