@@ -1,7 +1,10 @@
 import '../constants/misc.dart';
+import '../constants/product_types.dart';
 import '../object/abstract_object.dart';
 import '../object/object_graph.dart';
 import '../object/object_list.dart';
+import '../project/project_helper.dart';
+import '../project/xcode_project.dart';
 import 'pbx_build_file.dart';
 import 'pbx_build_phase.dart';
 import 'pbx_container_item_proxy.dart';
@@ -252,12 +255,128 @@ abstract class AbstractTarget extends AbstractObject {
   /// Throws a [StateError] when the target has no configuration list (Ruby
   /// raises a `NoMethodError`).
   /// Port of `AbstractTarget#build_configurations`.
-  ObjectList<XCBuildConfiguration> get buildConfigurations {
+  ObjectList<XCBuildConfiguration> get buildConfigurations =>
+      _requiredConfigurationList.buildConfigurations;
+
+  /// The [buildConfigurationList], or a [StateError] where Ruby would raise a
+  /// `NoMethodError` on `nil`.
+  XCConfigurationList get _requiredConfigurationList {
     final list = buildConfigurationList;
     if (list == null) {
       throw StateError('Target "$displayName" has no build configuration list');
     }
-    return list.buildConfigurations;
+    return list;
+  }
+
+  /// The SDK the target uses: its `SDKROOT` setting, resolved against the
+  /// project's, or `null` when it has none (or when it is not a string, as an
+  /// array: Ruby then finds no platform either).
+  /// Throws a [StateError] when the configurations disagree
+  /// (see [commonResolvedBuildSetting]).
+  /// Port of `AbstractTarget#sdk`.
+  String? get sdk {
+    final value = commonResolvedBuildSetting('SDKROOT');
+    return value is String ? value : null;
+  }
+
+  /// The name of the platform of the target, one of `ios`, `osx`, `tvos`,
+  /// `visionos` and `watchos` (the symbols of Ruby as strings), or `null`
+  /// when the [sdk] is unknown or missing. Like Ruby it looks for the
+  /// substrings `iphoneos`, `macosx`, `appletvos`, `xros` and `watchos` in
+  /// that order, so `iphonesimulator` has no platform.
+  /// Port of `AbstractTarget#platform_name`.
+  String? get platformName {
+    final sdk = this.sdk;
+    if (sdk == null) return null;
+    if (sdk.contains('iphoneos')) return 'ios';
+    if (sdk.contains('macosx')) return 'osx';
+    if (sdk.contains('appletvos')) return 'tvos';
+    if (sdk.contains('xros')) return 'visionos';
+    if (sdk.contains('watchos')) return 'watchos';
+    return null;
+  }
+
+  /// The name of the build setting that holds the deployment target of each
+  /// platform of [platformName].
+  /// Port of `AbstractTarget::DEPLOYMENT_TARGET_SETTING_BY_PLATFORM_NAME`.
+  static const Map<String, String> deploymentTargetSettingByPlatformName = {
+    'ios': 'IPHONEOS_DEPLOYMENT_TARGET',
+    'osx': 'MACOSX_DEPLOYMENT_TARGET',
+    'tvos': 'TVOS_DEPLOYMENT_TARGET',
+    'visionos': 'XROS_DEPLOYMENT_TARGET',
+    'watchos': 'WATCHOS_DEPLOYMENT_TARGET',
+  };
+
+  /// The deployment target of the target according to its [platformName], or
+  /// `null` when it has no platform or no deployment target.
+  /// Throws a [StateError] when the configurations disagree.
+  /// Port of `AbstractTarget#deployment_target`.
+  String? get deploymentTarget {
+    final setting = deploymentTargetSettingByPlatformName[platformName];
+    if (setting == null) return null;
+    final value = commonResolvedBuildSetting(setting);
+    return value is String ? value : null;
+  }
+
+  /// The build settings of the configuration named [buildConfigurationName],
+  /// or `null` when the target has no such configuration. The map is the live
+  /// [XCBuildConfiguration.buildSettings] of the configuration, not a copy, so
+  /// changing a key changes only that key of that configuration.
+  /// Throws a [StateError] when the target has no configuration list (Ruby
+  /// raises a `NoMethodError`).
+  /// Port of `AbstractTarget#build_settings`.
+  Map<String, dynamic>? buildSettings(String buildConfigurationName) =>
+      _requiredConfigurationList.buildSettings(buildConfigurationName);
+
+  /// Adds a build configuration named [name] to the target and fills it with
+  /// the default build settings of a [type] configuration for the target's
+  /// [platformName], [deploymentTarget] and, for a [PBXNativeTarget], product
+  /// type (an application when it has none). Objective-C is the language, as
+  /// in Ruby.
+  /// When the target already has a configuration called [name] nothing is
+  /// added and that configuration is returned untouched, whatever its [type].
+  /// The new configuration is appended to [buildConfigurations] and takes
+  /// nothing from the configurations of the project.
+  /// Throws a [StateError] when the target has no configuration list, or when
+  /// its configurations disagree about the SDK or the deployment target (Ruby
+  /// raises a `NoMethodError` and a `RuntimeError`); nothing is created then.
+  /// Port of `AbstractTarget#add_build_configuration`.
+  XCBuildConfiguration addBuildConfiguration(
+    String name,
+    BuildConfigType type,
+  ) {
+    final list = _requiredConfigurationList;
+    final existing = list[name];
+    if (existing != null) return existing;
+
+    // `self` for the type promotion of the product type, which only native
+    // targets have (Ruby: `respond_to?(:product_type)`).
+    final self = this;
+    final productTypeUti = self is PBXNativeTarget ? self.productType : null;
+    final settings = ProjectHelper.commonBuildSettings(
+      type.name,
+      platformName,
+      _productTypeKey(productTypeUti),
+      'objc',
+      deploymentTarget: deploymentTarget,
+    );
+    final configuration = project.newObject(
+      (g, u) => XCBuildConfiguration(g, u),
+    )..name = name;
+    configuration.buildSettings = settings;
+    list.buildConfigurations.add(configuration);
+    return configuration;
+  }
+
+  /// The name Ruby gives to the product type [uti]: the first entry of
+  /// [ProductTypes.productTypeUti] with that UTI, [uti] itself when there is
+  /// none and `application` when it is `null`.
+  static String _productTypeKey(String? uti) {
+    if (uti == null) return 'application';
+    for (final entry in ProductTypes.productTypeUti.entries) {
+      if (entry.value == uti) return entry.key;
+    }
+    return uti;
   }
 
   /// The shell script build phases of the target, in the order of
@@ -332,15 +451,21 @@ abstract class AbstractTarget extends AbstractObject {
             as Map<String, dynamic>? ??
         <String, dynamic>{};
 
-    return targetSettings.map((configName, targetVal) {
-      final projVal = projectSettings[configName];
-      if (targetVal != null &&
-          projVal != null &&
-          _includesInherited(targetVal)) {
-        return MapEntry(configName, _expandInherited(targetVal, projVal));
-      }
-      return MapEntry(configName, targetVal ?? projVal);
-    });
+    // Like Ruby's `Hash#merge`: the configurations only the project has are
+    // part of the result too, with the project value, after the target ones.
+    return {
+      ...targetSettings.map((configName, targetVal) {
+        final projVal = projectSettings[configName];
+        if (targetVal != null &&
+            projVal != null &&
+            _includesInherited(targetVal)) {
+          return MapEntry(configName, _expandInherited(targetVal, projVal));
+        }
+        return MapEntry(configName, targetVal ?? projVal);
+      }),
+      for (final entry in projectSettings.entries)
+        if (!targetSettings.containsKey(entry.key)) entry.key: entry.value,
+    };
   }
 
   /// Returns the single resolved value for [key] if all configurations agree.

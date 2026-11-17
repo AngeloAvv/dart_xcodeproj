@@ -149,6 +149,25 @@ class XCConfigurationList extends AbstractObject {
     return result;
   }
 
+  /// Returns the build settings of the configuration named
+  /// [buildConfigurationName], or `null` when there is none. The map is the
+  /// live [XCBuildConfiguration.buildSettings] of the configuration, not a
+  /// copy.
+  /// Port of `#build_settings`.
+  Map<String, dynamic>? buildSettings(String buildConfigurationName) =>
+      this[buildConfigurationName]?.buildSettings;
+
+  /// Sets the build setting [key] to [value] in every configuration of the
+  /// list and leaves their other settings untouched. [value] is a [String] for
+  /// scalar settings or a `List<dynamic>` for array settings (never `null`); the very same
+  /// instance is stored in each configuration, like Ruby does.
+  /// Port of `#set_setting`.
+  void setSetting(String key, Object value) {
+    for (final bc in buildConfigurations) {
+      bc.buildSettings[key] = value;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Serialization
   // ---------------------------------------------------------------------------
