@@ -538,8 +538,13 @@ class PBXShellScriptBuildPhase extends AbstractBuildPhase {
   /// Path to the shell interpreter. Default `/bin/sh`.
   String shellPath = '/bin/sh';
 
-  /// The shell script body. Default matches Ruby's placeholder.
-  String shellScript = '# Type a script...\n';
+  /// Ruby's `default` for `shell_script`.
+  static const String _defaultShellScript =
+      '# Type a script or drag a script file from your workspace to insert its '
+      'path.\n';
+
+  /// The shell script body. Defaults to the placeholder of Ruby.
+  String shellScript = _defaultShellScript;
 
   /// Whether to show environment variables in the build log (optional).
   String? showEnvVarsInLog;
@@ -571,7 +576,7 @@ class PBXShellScriptBuildPhase extends AbstractBuildPhase {
     outputPaths = [];
     outputFileListPaths = [];
     shellPath = '/bin/sh';
-    shellScript = '# Type a script...\n';
+    shellScript = _defaultShellScript;
   }
 
   /// Subclass attributes first, then AbstractBuildPhase attributes.
