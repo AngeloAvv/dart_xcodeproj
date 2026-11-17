@@ -149,6 +149,17 @@ class XCConfigurationList extends AbstractObject {
     return result;
   }
 
+  /// Sets the build setting [key] to [value] in every configuration of the
+  /// list and leaves their other settings untouched. [value] is a [String] for
+  /// scalar settings or a `List<dynamic>` for array settings; the very same
+  /// instance is stored in each configuration, like Ruby does.
+  /// Port of `#set_setting`.
+  void setSetting(String key, dynamic value) {
+    for (final bc in buildConfigurations) {
+      bc.buildSettings[key] = value;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Serialization
   // ---------------------------------------------------------------------------
