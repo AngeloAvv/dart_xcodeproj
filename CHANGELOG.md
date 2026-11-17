@@ -4,6 +4,7 @@
 
 ### Breaking Changes
 
+- The minimum Dart SDK is now 3.11 (was 3.9 in `pubspec.yaml`). It was already the effective floor, since the `xml` ^7 dependency requires Dart 3.11, so on Dart 3.9 and 3.10 the package could not be resolved
 - `XCScheme.buildAction`, `testAction`, `launchAction`, `profileAction`, `analyzeAction` and `archiveAction` no longer add an element to the document when the scheme lacks it. Like Ruby's `XCScheme#launch_action` and friends they return a default action that is not saved until it is assigned, and the same instance on every call, so reading a getter never changes what `save` writes. Code that relied on the getter attaching the missing element must now assign it (`scheme.testAction = scheme.testAction`)
 - `ObjectGraph.newObject` takes a new optional `uuid` parameter (see Features): classes implementing `ObjectGraph` must accept it
 - `AbstractObject.asciiPlistAnnotation` is now `String?`: `null` (no annotation) for the main group. `AsciiPlistWriter.write` given a plain map no longer annotates anything, only the annotated nodes of `AbstractObject.toAsciiPlist()` are printed

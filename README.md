@@ -74,14 +74,21 @@ Files outside the project that refer to its UUIDs are **not** rewritten: the
 pointing at the old UUIDs and must be regenerated or updated by the caller.
 
 To create objects with stable UUIDs instead, pin them: `newObject` takes an
-optional `uuid` (an invalid or already used one throws an `ArgumentError`), and
-`UuidGenerator.deterministic` derives a 24 (or 32) char UUID from a seed.
-Namespace the seeds, because the truncated 24 chars raise the collision odds:
+optional `uuid` (an invalid one, or one already used by an object of the
+project, throws an `ArgumentError`), and `UuidGenerator.deterministic` derives a
+24 (or 32) char UUID from a seed. Namespace the seeds, because the truncated 24
+chars raise the collision odds:
 
 ```dart
 final uuid = UuidGenerator.deterministic('my_tool/Runner/config');
 final group = project.newObject((g, u) => PBXGroup(g, u), uuid: uuid);
+project.mainGroup.children.add(group); // an object is part of the project once something refers to it
 ```
+
+Only objects already part of the project are checked: two objects created with
+the same `uuid` before either is attached are not detected, and the second one
+would replace the first when attached. Attach each object before pinning the
+same UUID again.
 
 ### Common edits
 
@@ -102,8 +109,9 @@ target.addBuildConfiguration('Staging', BuildConfigType.release);
 
 // Scheme actions: getters return the typed action, setters replace it
 final scheme = await XCScheme.open('Runner.xcscheme');
-scheme.launchAction.buildConfiguration = 'Debug-dev';
-scheme.testAction = scheme.testAction; // attach a default action if missing
+final launch = scheme.launchAction;
+launch.buildConfiguration = 'Debug-dev';
+scheme.launchAction = launch; // attaches the default action if the scheme had none
 ```
 
 A scheme getter does not add a missing action to the document: assign it, as
