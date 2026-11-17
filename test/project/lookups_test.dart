@@ -158,5 +158,23 @@ void main() {
       final dir = p.dirname(p.normalize(p.absolute(relative)));
       expect(opened.referenceForPath('$dir/Runner/Info.plist'), isNotNull);
     });
+
+    test('keeps the directory the project was opened in when the working '
+        'directory changes, like Ruby\'s absolute project_dir', () async {
+      final relative = p.relative('${tmp.path}/dir/Runner.xcodeproj');
+      final opened = await _open(tmp, asPath: relative);
+      final dir = p.dirname(p.normalize(p.absolute(relative)));
+      final other = Directory('${tmp.path}/other')..createSync();
+
+      final original = Directory.current;
+      addTearDown(() => Directory.current = original);
+      // Everything above is done: the working directory is changed only for
+      // the lookup, as it is process-wide.
+      Directory.current = other;
+      final found = opened.referenceForPath('$dir/Runner/Info.plist');
+      Directory.current = original;
+
+      expect(found, isNotNull);
+    });
   });
 }

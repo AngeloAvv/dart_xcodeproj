@@ -88,7 +88,14 @@ class XcodeProject implements ObjectGraph {
   // Construction
   // ---------------------------------------------------------------------------
 
-  XcodeProject._(this.path);
+  XcodeProject._(this.path)
+    : _absoluteProjectDir = p.normalize(p.absolute(p.dirname(path)));
+
+  /// [projectDir] made absolute against the working directory in effect when
+  /// the project was opened or created, so that a later change of
+  /// `Directory.current` does not move it. Ruby's `project_dir` is absolute
+  /// from `Project.new` on (`Pathname#expand_path`).
+  final String _absoluteProjectDir;
 
   // ---------------------------------------------------------------------------
   // ---------------------------------------------------------------------------
@@ -400,9 +407,9 @@ class XcodeProject implements ObjectGraph {
         'Paths must be absolute',
       );
     }
-    // Ruby's project directory is always absolute (`expand_path`), where
-    // [path] may be relative.
-    final dir = p.normalize(p.absolute(projectDir));
+    // Ruby's project directory is absolute (`expand_path`), where [path] may be
+    // relative: use the one the project had when it was opened or created.
+    final dir = _absoluteProjectDir;
     return objectsByUuid.values
         .whereType<PBXFileReference>()
         .where(
