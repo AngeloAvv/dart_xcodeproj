@@ -5,6 +5,7 @@
 // build_settings_helpers_ruby_parity_test.dart.
 
 import 'package:dart_xcodeproj/src/pbx/pbx_native_target.dart';
+import 'package:dart_xcodeproj/src/pbx/xc_build_configuration.dart';
 import 'package:dart_xcodeproj/src/pbx/xc_configuration_list.dart';
 import 'package:dart_xcodeproj/src/project/xcode_project.dart';
 import 'package:test/test.dart';
@@ -44,7 +45,10 @@ void main() {
           expect(runner.deploymentTarget, equals(expected[name]!.$3));
         });
 
-        test('are null for a target without SDKROOT', () {
+        test('are null for a target and a project without SDKROOT', () {
+          for (final config in project.buildConfigurations) {
+            config.buildSettings.remove('SDKROOT');
+          }
           final bare = project.newObject((g, u) => PBXNativeTarget(g, u))
             ..buildConfigurationList = project.newObject(
               (g, u) => XCConfigurationList(g, u),
@@ -79,6 +83,33 @@ void main() {
             ..setSetting('WATCHOS_DEPLOYMENT_TARGET', '9.0');
 
           expect(runner.deploymentTarget, equals('9.0'));
+        });
+
+        test('count a configuration only the project has, like Ruby', () {
+          // Ruby merges the project settings into the target ones, so the
+          // `Profile` of the project (SDKROOT iphoneos) is part of the result
+          // for a target that has only Debug and Release.
+          final tv = project.newObject((g, u) => PBXNativeTarget(g, u))
+            ..buildConfigurationList = project.newObject(
+              (g, u) => XCConfigurationList(g, u),
+            );
+          for (final configName in ['Debug', 'Release']) {
+            tv.buildConfigurationList!.buildConfigurations.add(
+              project.newObject((g, u) => XCBuildConfiguration(g, u))
+                ..name = configName
+                ..buildSettings = {'SDKROOT': 'appletvos'},
+            );
+          }
+
+          expect(
+            tv.resolvedBuildSetting('SDKROOT'),
+            equals({
+              'Debug': 'appletvos',
+              'Release': 'appletvos',
+              'Profile': name == 'ios' ? 'iphoneos' : 'macosx',
+            }),
+          );
+          expect(() => tv.sdk, throwsStateError);
         });
 
         test('throw a StateError when the configurations disagree', () {

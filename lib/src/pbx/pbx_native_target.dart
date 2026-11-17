@@ -447,15 +447,21 @@ abstract class AbstractTarget extends AbstractObject {
             as Map<String, dynamic>? ??
         <String, dynamic>{};
 
-    return targetSettings.map((configName, targetVal) {
-      final projVal = projectSettings[configName];
-      if (targetVal != null &&
-          projVal != null &&
-          _includesInherited(targetVal)) {
-        return MapEntry(configName, _expandInherited(targetVal, projVal));
-      }
-      return MapEntry(configName, targetVal ?? projVal);
-    });
+    // Like Ruby's `Hash#merge`: the configurations only the project has are
+    // part of the result too, with the project value, after the target ones.
+    return {
+      ...targetSettings.map((configName, targetVal) {
+        final projVal = projectSettings[configName];
+        if (targetVal != null &&
+            projVal != null &&
+            _includesInherited(targetVal)) {
+          return MapEntry(configName, _expandInherited(targetVal, projVal));
+        }
+        return MapEntry(configName, targetVal ?? projVal);
+      }),
+      for (final entry in projectSettings.entries)
+        if (!targetSettings.containsKey(entry.key)) entry.key: entry.value,
+    };
   }
 
   /// Returns the single resolved value for [key] if all configurations agree.
