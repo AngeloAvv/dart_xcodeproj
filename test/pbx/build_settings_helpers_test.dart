@@ -31,6 +31,46 @@ void main() {
         runner = _target(project, 'Runner');
       });
 
+      group('buildSettings(name)', () {
+        test('the list returns the live settings of the named configuration', () {
+          final list = runner.buildConfigurationList!;
+
+          final settings = list.buildSettings('Debug');
+
+          expect(settings, same(list['Debug']!.buildSettings));
+          settings!['FOO'] = 'bar';
+          expect(list['Debug']!.buildSettings['FOO'], equals('bar'));
+          expect(list['Release']!.buildSettings.containsKey('FOO'), isFalse);
+        });
+
+        test('the list returns null for an unknown name', () {
+          expect(runner.buildConfigurationList!.buildSettings('Nope'), isNull);
+        });
+
+        test('the target returns the settings of the named configuration', () {
+          for (final configName in ['Debug', 'Release', 'Profile']) {
+            expect(
+              runner.buildSettings(configName),
+              same(
+                runner.buildConfigurationList![configName]?.buildSettings,
+              ),
+              reason: configName,
+            );
+          }
+          expect(runner.buildSettings('Profile'), isNotNull);
+        });
+
+        test('the target returns null for an unknown name', () {
+          expect(runner.buildSettings('Nope'), isNull);
+        });
+
+        test('the target throws a StateError without a configuration list', () {
+          final bare = project.newObject((g, u) => PBXNativeTarget(g, u));
+
+          expect(() => bare.buildSettings('Debug'), throwsStateError);
+        });
+      });
+
       group('XCConfigurationList.setSetting', () {
         test('updates an existing key in every configuration', () {
           final list = runner.buildConfigurationList!;

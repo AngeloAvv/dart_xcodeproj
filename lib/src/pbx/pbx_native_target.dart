@@ -260,6 +260,21 @@ abstract class AbstractTarget extends AbstractObject {
     return list.buildConfigurations;
   }
 
+  /// The build settings of the configuration named [buildConfigurationName],
+  /// or `null` when the target has no such configuration. The map is the live
+  /// [XCBuildConfiguration.buildSettings] of the configuration, not a copy, so
+  /// changing a key changes only that key of that configuration.
+  /// Throws a [StateError] when the target has no configuration list (Ruby
+  /// raises a `NoMethodError`).
+  /// Port of `AbstractTarget#build_settings`.
+  Map<String, dynamic>? buildSettings(String buildConfigurationName) {
+    final list = buildConfigurationList;
+    if (list == null) {
+      throw StateError('Target "$displayName" has no build configuration list');
+    }
+    return list.buildSettings(buildConfigurationName);
+  }
+
   /// The shell script build phases of the target, in the order of
   /// [buildPhases].
   /// Port of `AbstractTarget#shell_script_build_phases`.
