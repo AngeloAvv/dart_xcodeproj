@@ -146,6 +146,17 @@ void _expectRemovalLikeRuby(Map<String, int> dart, Map<String, int> ruby) {
   expect(ruby['objects']! - dart['objects']!, orphans);
 }
 
+/// The UUIDs of the build files a removal from [group] has no reason to
+/// delete: those whose file is not one of its descendants.
+Set<String> _buildFilesOutside(XcodeProject project, PBXGroup group) {
+  final descendants = group.recursiveChildren.toSet();
+  return {
+    for (final buildFile
+        in project.objectsByUuid.values.whereType<PBXBuildFile>())
+      if (!descendants.contains(buildFile.fileRef)) buildFile.uuid,
+  };
+}
+
 Map<String, int> _counts(XcodeProject project) => {
   'objects': project.objectsByUuid.length,
   'buildFiles': project.objectsByUuid.values.whereType<PBXBuildFile>().length,
@@ -180,6 +191,12 @@ void main() {
             (c['args'] as Map?)?.cast<String, dynamic>() ?? const {},
           );
 
+          // The aggregate allowance of _expectRemovalLikeRuby would let an
+          // unrelated build file go too: check those separately.
+          final survivors = _removes.contains(entry.key)
+              ? _buildFilesOutside(project, receiver as PBXGroup)
+              : const <String>{};
+
           if (c.containsKey('error')) {
             // Ruby's NoMethodError (a name that is not a group) is a StateError.
             expect(
@@ -196,6 +213,11 @@ void main() {
             final ruby = (c['counts'] as Map).cast<String, int>();
             if (_removes.contains(entry.key)) {
               _expectRemovalLikeRuby(counts, ruby);
+              expect(
+                project.objectsByUuid.keys,
+                containsAll(survivors),
+                reason: 'a build file of a file outside the group was removed',
+              );
             } else {
               expect(counts, ruby);
             }
