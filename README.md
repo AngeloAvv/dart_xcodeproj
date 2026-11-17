@@ -22,7 +22,7 @@ library and CLI.
 
 ```yaml
 dependencies:
-  dart_xcodeproj: ^0.3.0
+  dart_xcodeproj: ^0.4.0
 ```
 
 Or via the command line:
@@ -73,25 +73,69 @@ Files outside the project that refer to its UUIDs are **not** rewritten: the
 `BlueprintIdentifier` of the `BuildableReference`s in `.xcscheme` files keeps
 pointing at the old UUIDs and must be regenerated or updated by the caller.
 
+To create objects with stable UUIDs instead, pin them: `newObject` takes an
+optional `uuid` (an invalid one, or one already used by an object of the
+project, throws an `ArgumentError`), and `UuidGenerator.deterministic` derives a
+24 (or 32) char UUID from a seed. Namespace the seeds, because the truncated 24
+chars raise the collision odds:
+
+```dart
+final uuid = UuidGenerator.deterministic('my_tool/Runner/config');
+final group = project.newObject((g, u) => PBXGroup(g, u), uuid: uuid);
+project.mainGroup.children.add(group); // an object is part of the project once something refers to it
+```
+
+Only objects already part of the project are checked: two objects created with
+the same `uuid` before either is attached are not detected, and the second one
+would replace the first when attached. Attach each object before pinning the
+same UUID again.
+
+### Common edits
+
+```dart
+// Groups and files
+final group = project.mainGroup.findSubpath('Runner/Generated', create: true);
+final ref = project.referenceForPath('/abs/path/to/AppConfig.swift');
+
+// Build phases: found or created on demand, then fill them
+final target = project.nativeTargets.first;
+target.addFileReferences([if (ref != null) ref], compilerFlags: '-fobjc-arc');
+final script = target.newShellScriptBuildPhase('Run Script');
+
+// Build settings, per key or per configuration
+target.buildConfigurationList?.setSetting('SWIFT_VERSION', '5.0');
+target.buildSettings('Debug')?['PRODUCT_BUNDLE_IDENTIFIER'] = 'com.example.app';
+target.addBuildConfiguration('Staging', BuildConfigType.release);
+
+// Scheme actions: getters return the typed action, setters replace it
+final scheme = await XCScheme.open('Runner.xcscheme');
+final launch = scheme.launchAction;
+launch.buildConfiguration = 'Debug-dev';
+scheme.launchAction = launch; // attaches the default action if the scheme had none
+```
+
+A scheme getter does not add a missing action to the document: assign it, as
+above, to save it.
+
 ## Library API overview
 
 | Type | Purpose |
 |------|---------|
-| `XcodeProject` | Open, create, mutate, and save `.xcodeproj` files |
+| `XcodeProject` | Open, create, mutate, and save `.xcodeproj` files: `newObject` (optionally with a pinned `uuid`), `predictabilizeUuids`, `nativeTargets`, `referenceForPath` |
 | `ProjectHelper` | High-level helpers: `newTarget`, `newResourcesBundle`, `newAggregateTarget` |
 | `XCWorkspace` | Read and write `.xcworkspace` files |
-| `XCScheme` | Read and write `.xcscheme` files |
+| `XCScheme` | Read and write `.xcscheme` files; typed `buildAction`, `testAction`, `launchAction`, `profileAction`, `analyzeAction` and `archiveAction` getters and setters |
 | `XcConfig` | Read, merge, and write `.xcconfig` files |
 | `Differ` | UUID-agnostic recursive diff between two projects |
 | `UuidGenerator` | Generate uppercase hex UUIDs: random (24 chars) and deterministic from a seed (24 or 32 chars), and the structural paths `XcodeProject.predictabilizeUuids` derives them from |
 | `Constants` | Xcode file types, product types, SDK versions, and more |
 | `OtherLinkerFlagsParser` | Parse `OTHER_LDFLAGS`-style settings |
-| `PBXNativeTarget` | Native app/framework/library target |
+| `PBXNativeTarget` | Native app/framework/library target: `sourceBuildPhase` and the other find-or-create phases, `addFileReferences`, `addResources`, `newShellScriptBuildPhase`, `newCopyFilesBuildPhase`, `buildSettings(name)`, `addBuildConfiguration` |
 | `PBXAggregateTarget` | Aggregate (script-only) target |
 | `PBXFileReference` | File reference in the project navigator |
-| `PBXGroup` | Group in the project navigator |
+| `PBXGroup` | Group in the project navigator: `findSubpath`, `findFileByPath`, `recursiveChildren` |
 | `XCBuildConfiguration` | A single named build configuration |
-| `XCConfigurationList` | The list of build configurations for a target or project |
+| `XCConfigurationList` | The list of build configurations for a target or project: `setSetting`, `buildSettings(name)` |
 
 ## CLI usage
 
