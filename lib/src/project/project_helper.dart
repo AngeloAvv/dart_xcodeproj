@@ -223,25 +223,26 @@ class ProjectHelper {
   /// platform, product type and language combination.
   /// Follows the key-combination algorithm from RESEARCH Pattern 4 /
   /// positional key order is [type, platform, productType, language], and all
-  /// length-1 to length-N combinations are generated in index order.
-  /// Port of.
+  /// length-1 to length-N combinations are generated in index order. A `null`
+  /// [platform] or [language] is left out of the combinations, like Ruby's
+  /// `compact`.
+  /// When [deploymentTarget] is given, the deployment target setting of the
+  /// [platform] is set to it, and `CLANG_ENABLE_OBJC_WEAK` to `NO` when it
+  /// sorts before `5` (iOS) or `10.7` (macOS) as a string, like Ruby does
+  /// (`'13.0' < '5'`, so also for iOS 13).
+  /// The returned map and its values are copies of the constants.
+  /// Port of `ProjectHelper.common_build_settings`.
   static Map<String, dynamic> commonBuildSettings(
     String type,
-    String platform,
+    String? platform,
     String productType,
-    String? language,
-  ) {
-    final result = Map<String, dynamic>.from(
-      BuildSettings.commonBuildSettings['all'] ?? {},
-    );
+    String? language, {
+    String? deploymentTarget,
+  }) {
+    final result = _deepDup(BuildSettings.commonBuildSettings['all'] ?? {});
 
     // Keys in positional order: [type, platform, productType, language].compact
-    final keys = <String>[
-      type,
-      platform,
-      productType,
-      if (language != null) language,
-    ];
+    final keys = <String>[type, ?platform, productType, ?language];
 
     // Generate all length-1 to length-N combinations in input-array index order.
     // Matches Ruby: keys.combination(n).to_a
@@ -250,13 +251,46 @@ class ProjectHelper {
         final comboKey = combo.join(',');
         final settings = BuildSettings.commonBuildSettings[comboKey];
         if (settings != null) {
-          result.addAll(Map<String, dynamic>.from(settings));
+          result.addAll(_deepDup(settings));
         }
+      }
+    }
+
+    if (deploymentTarget != null) {
+      switch (platform) {
+        case 'ios':
+          result['IPHONEOS_DEPLOYMENT_TARGET'] = deploymentTarget;
+          if (deploymentTarget.compareTo('5') < 0) {
+            result['CLANG_ENABLE_OBJC_WEAK'] = 'NO';
+          }
+        case 'osx':
+          result['MACOSX_DEPLOYMENT_TARGET'] = deploymentTarget;
+          if (deploymentTarget.compareTo('10.7') < 0) {
+            result['CLANG_ENABLE_OBJC_WEAK'] = 'NO';
+          }
+        case 'tvos':
+          result['TVOS_DEPLOYMENT_TARGET'] = deploymentTarget;
+        case 'visionos':
+          result['XROS_DEPLOYMENT_TARGET'] = deploymentTarget;
+        case 'watchos':
+          result['WATCHOS_DEPLOYMENT_TARGET'] = deploymentTarget;
       }
     }
 
     return result;
   }
+
+  /// A deep copy of [settings]: maps and lists are copied, scalars shared.
+  /// Port of `ProjectHelper.deep_dup`.
+  static Map<String, dynamic> _deepDup(Map<String, dynamic> settings) => {
+    for (final entry in settings.entries) entry.key: _deepDupValue(entry.value),
+  };
+
+  static dynamic _deepDupValue(dynamic value) => switch (value) {
+    final Map<String, dynamic> map => _deepDup(map),
+    final List<dynamic> list => [for (final v in list) _deepDupValue(v)],
+    _ => value,
+  };
 
   // ---------------------------------------------------------------------------
   // Private helpers

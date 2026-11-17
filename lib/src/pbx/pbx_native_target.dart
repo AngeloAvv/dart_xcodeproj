@@ -1,7 +1,10 @@
 import '../constants/misc.dart';
+import '../constants/product_types.dart';
 import '../object/abstract_object.dart';
 import '../object/object_graph.dart';
 import '../object/object_list.dart';
+import '../project/project_helper.dart';
+import '../project/xcode_project.dart';
 import 'pbx_build_file.dart';
 import 'pbx_build_phase.dart';
 import 'pbx_container_item_proxy.dart';
@@ -318,6 +321,58 @@ abstract class AbstractTarget extends AbstractObject {
       throw StateError('Target "$displayName" has no build configuration list');
     }
     return list.buildSettings(buildConfigurationName);
+  }
+
+  /// Adds a build configuration named [name] to the target and fills it with
+  /// the default build settings of a [type] configuration for the target's
+  /// [platformName], [deploymentTarget] and, for a [PBXNativeTarget], product
+  /// type (an application when it has none). Objective-C is the language, as
+  /// in Ruby.
+  /// When the target already has a configuration called [name] nothing is
+  /// added and that configuration is returned untouched, whatever its [type].
+  /// The new configuration is appended to [buildConfigurations] and takes
+  /// nothing from the configurations of the project.
+  /// Throws a [StateError] when the target has no configuration list, or when
+  /// its configurations disagree about the SDK or the deployment target (Ruby
+  /// raises a `NoMethodError` and a `RuntimeError`); nothing is created then.
+  /// Port of `AbstractTarget#add_build_configuration`.
+  XCBuildConfiguration addBuildConfiguration(
+    String name,
+    BuildConfigType type,
+  ) {
+    final list = buildConfigurationList;
+    if (list == null) {
+      throw StateError('Target "$displayName" has no build configuration list');
+    }
+    final existing = list[name];
+    if (existing != null) return existing;
+
+    final self = this;
+    final productTypeUti = self is PBXNativeTarget ? self.productType : null;
+    final settings = ProjectHelper.commonBuildSettings(
+      type.name,
+      platformName,
+      _productTypeKey(productTypeUti),
+      'objc',
+      deploymentTarget: deploymentTarget,
+    );
+    final configuration = project.newObject(
+      (g, u) => XCBuildConfiguration(g, u),
+    )..name = name;
+    configuration.buildSettings = settings;
+    list.buildConfigurations.add(configuration);
+    return configuration;
+  }
+
+  /// The name Ruby gives to the product type [uti]: the first entry of
+  /// [ProductTypes.productTypeUti] with that UTI, [uti] itself when there is
+  /// none and `application` when it is `null`.
+  static String _productTypeKey(String? uti) {
+    if (uti == null) return 'application';
+    for (final entry in ProductTypes.productTypeUti.entries) {
+      if (entry.value == uti) return entry.key;
+    }
+    return uti;
   }
 
   /// The shell script build phases of the target, in the order of

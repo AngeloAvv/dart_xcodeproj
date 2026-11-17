@@ -5,7 +5,6 @@
 // build_settings_helpers_ruby_parity_test.dart.
 
 import 'package:dart_xcodeproj/src/pbx/pbx_native_target.dart';
-import 'package:dart_xcodeproj/src/pbx/xc_build_configuration.dart';
 import 'package:dart_xcodeproj/src/pbx/xc_configuration_list.dart';
 import 'package:dart_xcodeproj/src/project/xcode_project.dart';
 import 'package:test/test.dart';
@@ -90,17 +89,151 @@ void main() {
         });
       });
 
-      group('buildSettings(name)', () {
-        test('the list returns the live settings of the named configuration', () {
-          final list = runner.buildConfigurationList!;
+      group('addBuildConfiguration', () {
+        // Settings of `add_build_configuration` on the Runner target
+        // (xcodeproj 1.28.1). `CLANG_ENABLE_OBJC_WEAK` is `NO` because Ruby
+        // compares the deployment target as a string: '13.0' < '5'.
+        const debugSettings = {
+          'ios': {
+            'SDKROOT': 'iphoneos',
+            'ASSETCATALOG_COMPILER_APPICON_NAME': 'AppIcon',
+            'ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME': 'AccentColor',
+            'LD_RUNPATH_SEARCH_PATHS':
+                r'$(inherited) @executable_path/Frameworks',
+            'TARGETED_DEVICE_FAMILY': '1,2',
+            'IPHONEOS_DEPLOYMENT_TARGET': '13.0',
+            'CLANG_ENABLE_OBJC_WEAK': 'NO',
+          },
+          'macos': {
+            'SDKROOT': 'macosx',
+            'ASSETCATALOG_COMPILER_APPICON_NAME': 'AppIcon',
+            'ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME': 'AccentColor',
+            'COMBINE_HIDPI_IMAGES': 'YES',
+            'LD_RUNPATH_SEARCH_PATHS':
+                r'$(inherited) @executable_path/../Frameworks',
+            'MACOSX_DEPLOYMENT_TARGET': '10.15',
+            'CLANG_ENABLE_OBJC_WEAK': 'NO',
+          },
+        };
 
-          final settings = list.buildSettings('Debug');
+        test('creates a debug configuration with the defaults of Ruby', () {
+          final config = runner.addBuildConfiguration(
+            'Debug-dev',
+            BuildConfigType.debug,
+          );
 
-          expect(settings, same(list['Debug']!.buildSettings));
-          settings!['FOO'] = 'bar';
-          expect(list['Debug']!.buildSettings['FOO'], equals('bar'));
-          expect(list['Release']!.buildSettings.containsKey('FOO'), isFalse);
+          expect(config.name, equals('Debug-dev'));
+          expect(config.buildSettings, equals(debugSettings[name]));
         });
+
+        test(
+          'creates a release configuration with VALIDATE_PRODUCT on iOS',
+          () {
+            final config = runner.addBuildConfiguration(
+              'Release-dev',
+              BuildConfigType.release,
+            );
+
+            expect(
+              config.buildSettings,
+              equals({
+                ...debugSettings[name]!,
+                if (name == 'ios') 'VALIDATE_PRODUCT': 'YES',
+              }),
+            );
+          },
+        );
+
+        test('appends the configuration to the list of the target', () {
+          final names = [for (final c in runner.buildConfigurations) c.name];
+
+          final config = runner.addBuildConfiguration(
+            'Debug-dev',
+            BuildConfigType.debug,
+          );
+
+          expect(runner.buildConfigurations.last, same(config));
+          expect([
+            for (final c in runner.buildConfigurations) c.name,
+          ], equals([...names, 'Debug-dev']));
+          expect(project.objectsByUuid[config.uuid], same(config));
+          expect(runner.buildConfigurationList!['Debug-dev'], same(config));
+        });
+
+        test('does not touch the configurations of the project', () {
+          final names = [for (final c in project.buildConfigurations) c.name];
+
+          runner.addBuildConfiguration('Debug-dev', BuildConfigType.debug);
+
+          expect([
+            for (final c in project.buildConfigurations) c.name,
+          ], equals(names));
+        });
+
+        test('is idempotent: an existing name returns that configuration', () {
+          final existing = runner.buildConfigurationList!['Release']!;
+          final settings = Map<String, dynamic>.of(existing.buildSettings);
+          final count = runner.buildConfigurations.length;
+
+          final config = runner.addBuildConfiguration(
+            'Release',
+            BuildConfigType.debug,
+          );
+
+          expect(config, same(existing));
+          expect(config.buildSettings, equals(settings));
+          expect(runner.buildConfigurations.length, equals(count));
+        });
+
+        test('adding the same new name twice adds one configuration', () {
+          final first = runner.addBuildConfiguration(
+            'Debug-dev',
+            BuildConfigType.debug,
+          );
+          final count = runner.buildConfigurations.length;
+
+          final second = runner.addBuildConfiguration(
+            'Debug-dev',
+            BuildConfigType.release,
+          );
+
+          expect(second, same(first));
+          expect(runner.buildConfigurations.length, equals(count));
+        });
+
+        test('the settings are not shared between configurations', () {
+          final a = runner.addBuildConfiguration('A', BuildConfigType.debug);
+          final b = runner.addBuildConfiguration('B', BuildConfigType.debug);
+
+          a.buildSettings['SDKROOT'] = 'changed';
+
+          expect(b.buildSettings['SDKROOT'], isNot('changed'));
+        });
+
+        test('throws a StateError without a configuration list', () {
+          final bare = project.newObject((g, u) => PBXNativeTarget(g, u));
+
+          expect(
+            () => bare.addBuildConfiguration('X', BuildConfigType.debug),
+            throwsStateError,
+          );
+        });
+      });
+
+      group('buildSettings(name)', () {
+        test(
+          'the list returns the live settings of the named configuration',
+          () {
+            final list = runner.buildConfigurationList!;
+
+            final settings = list.buildSettings('Debug');
+
+            expect(settings, same(list['Debug']!.buildSettings));
+            settings!['FOO'] = 'bar';
+            expect(list['Debug']!.buildSettings['FOO'], equals('bar'));
+            expect(list['Release']!.buildSettings.containsKey('FOO'), isFalse);
+          },
+        );
 
         test('the list returns null for an unknown name', () {
           expect(runner.buildConfigurationList!.buildSettings('Nope'), isNull);
@@ -110,9 +243,7 @@ void main() {
           for (final configName in ['Debug', 'Release', 'Profile']) {
             expect(
               runner.buildSettings(configName),
-              same(
-                runner.buildConfigurationList![configName]?.buildSettings,
-              ),
+              same(runner.buildConfigurationList![configName]?.buildSettings),
               reason: configName,
             );
           }
