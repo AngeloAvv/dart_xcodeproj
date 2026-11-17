@@ -335,13 +335,17 @@ void main() {
       expect(phase.shellPath, equals('/bin/sh'));
     });
 
-    test(
-      'default shellScript is "# Type a script...\\n" after initializeDefaults()',
-      () {
-        final phase = graph.newObject((g, u) => PBXShellScriptBuildPhase(g, u));
-        expect(phase.shellScript, equals('# Type a script...\n'));
-      },
-    );
+    test('default shellScript is the placeholder of Ruby after '
+        'initializeDefaults()', () {
+      final phase = graph.newObject((g, u) => PBXShellScriptBuildPhase(g, u));
+      expect(
+        phase.shellScript,
+        equals(
+          '# Type a script or drag a script file from your workspace to '
+          'insert its path.\n',
+        ),
+      );
+    });
 
     test('default inputPaths is empty List<String> (not ObjectList)', () {
       final phase = graph.newObject((g, u) => PBXShellScriptBuildPhase(g, u));

@@ -1,9 +1,13 @@
 import '../constants/misc.dart';
 import '../object/abstract_object.dart';
+import '../object/object_graph.dart';
 import '../object/object_list.dart';
+import 'pbx_build_file.dart';
 import 'pbx_build_phase.dart';
 import 'pbx_container_item_proxy.dart';
+import 'pbx_file_reference.dart';
 import 'pbx_target_dependency.dart';
+import 'xc_build_configuration.dart';
 import 'xc_configuration_list.dart';
 import 'xc_swift_package_product_dependency.dart';
 
@@ -237,6 +241,60 @@ abstract class AbstractTarget extends AbstractObject {
     buildConfigurationList = null;
     buildPhases.clear();
     dependencies.clear();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build configuration and build phase helpers
+  // ---------------------------------------------------------------------------
+
+  /// The build configurations of the target (commonly `Debug` and `Release`),
+  /// those of its [buildConfigurationList].
+  /// Throws a [StateError] when the target has no configuration list (Ruby
+  /// raises a `NoMethodError`).
+  /// Port of `AbstractTarget#build_configurations`.
+  ObjectList<XCBuildConfiguration> get buildConfigurations {
+    final list = buildConfigurationList;
+    if (list == null) {
+      throw StateError('Target "$displayName" has no build configuration list');
+    }
+    return list.buildConfigurations;
+  }
+
+  /// The shell script build phases of the target, in the order of
+  /// [buildPhases].
+  /// Port of `AbstractTarget#shell_script_build_phases`.
+  List<PBXShellScriptBuildPhase> get shellScriptBuildPhases =>
+      buildPhases.whereType<PBXShellScriptBuildPhase>().toList();
+
+  /// The copy files build phases of the target, in the order of
+  /// [buildPhases].
+  /// Port of `AbstractTarget#copy_files_build_phases`.
+  List<PBXCopyFilesBuildPhase> get copyFilesBuildPhases =>
+      buildPhases.whereType<PBXCopyFilesBuildPhase>().toList();
+
+  /// Appends a new copy files build phase named [name] (optional) to
+  /// [buildPhases] and returns it. It copies to the resources folder until
+  /// [PBXCopyFilesBuildPhase.dstSubfolderSpec] says otherwise.
+  /// Unlike [PBXNativeTarget.sourceBuildPhase] and its siblings, a target can
+  /// have many of these: a new phase is created every time.
+  /// Port of `AbstractTarget#new_copy_files_build_phase`.
+  PBXCopyFilesBuildPhase newCopyFilesBuildPhase([String? name]) {
+    final phase = project.newObject((g, u) => PBXCopyFilesBuildPhase(g, u))
+      ..name = name;
+    buildPhases.add(phase);
+    return phase;
+  }
+
+  /// Appends a new shell script build phase named [name] (optional) to
+  /// [buildPhases] and returns it, with the default `/bin/sh` and
+  /// placeholder script: set [PBXShellScriptBuildPhase.shellScript]
+  /// to make it do something. A new phase is created every time.
+  /// Port of `AbstractTarget#new_shell_script_build_phase`.
+  PBXShellScriptBuildPhase newShellScriptBuildPhase([String? name]) {
+    final phase = project.newObject((g, u) => PBXShellScriptBuildPhase(g, u))
+      ..name = name;
+    buildPhases.add(phase);
+    return phase;
   }
 
   // ---------------------------------------------------------------------------
@@ -699,6 +757,136 @@ class PBXNativeTarget extends AbstractTarget {
     }
     return null;
   }
+
+  // ---------------------------------------------------------------------------
+  // Build phase helpers
+  // ---------------------------------------------------------------------------
+
+  /// Finds or creates the sources build phase of the target.
+  ///
+  /// A target should have only one sources build phase: the first one is
+  /// returned, and when there is none a new [PBXSourcesBuildPhase] is appended
+  /// to [buildPhases].
+  /// Port of `PBXNativeTarget#source_build_phase`.
+  PBXSourcesBuildPhase get sourceBuildPhase =>
+      _findOrCreateBuildPhase((g, u) => PBXSourcesBuildPhase(g, u));
+
+  /// Finds or creates the frameworks build phase of the target.
+  ///
+  /// A target should have only one frameworks build phase: the first one is
+  /// returned, and when there is none a new [PBXFrameworksBuildPhase] is
+  /// appended to [buildPhases].
+  /// Port of `PBXNativeTarget#frameworks_build_phase`.
+  PBXFrameworksBuildPhase get frameworksBuildPhase =>
+      _findOrCreateBuildPhase((g, u) => PBXFrameworksBuildPhase(g, u));
+
+  /// Finds or creates the resources build phase of the target.
+  ///
+  /// A target should have only one resources build phase: the first one is
+  /// returned, and when there is none a new [PBXResourcesBuildPhase] is
+  /// appended to [buildPhases].
+  /// Port of `PBXNativeTarget#resources_build_phase`.
+  PBXResourcesBuildPhase get resourcesBuildPhase =>
+      _findOrCreateBuildPhase((g, u) => PBXResourcesBuildPhase(g, u));
+
+  /// Finds or creates the headers build phase of the target.
+  ///
+  /// A target should have only one headers build phase: the first one is
+  /// returned, and when there is none a new [PBXHeadersBuildPhase] is appended
+  /// to [buildPhases].
+  /// Port of `PBXNativeTarget#headers_build_phase`.
+  PBXHeadersBuildPhase get headersBuildPhase =>
+      _findOrCreateBuildPhase((g, u) => PBXHeadersBuildPhase(g, u));
+
+  /// Adds [fileReferences] to the target and returns the build file of each,
+  /// in the same order.
+  ///
+  /// A file whose extension is one of [MiscConstants.headerFilesExtensions]
+  /// (compared in lower case, so `.HPP` is a header) goes to the
+  /// [headersBuildPhase], any other to the [sourceBuildPhase]; the phase is
+  /// created when the target has none, but only when there is a file to add.
+  /// A file that already has a build file in its phase is not added again: the
+  /// existing build file is returned (so a reference given twice yields the
+  /// same build file twice).
+  ///
+  /// A non-empty [compilerFlags] is stored as the `COMPILER_FLAGS` setting of
+  /// the build file of each source file (headers have none), appended after a
+  /// space to the flags the build file already has, even when they are the
+  /// same, the other settings being kept. [onBuildFile] is called with the
+  /// build file of each reference, a new or an existing one.
+  ///
+  /// Only [PBXFileReference]s are taken, as the Ruby docs say, though Ruby
+  /// would also take any object with a `path`, such as a group.
+  ///
+  /// Throws an [ArgumentError], before changing anything, when a reference has
+  /// no `path` (Ruby raises a `TypeError` midway).
+  /// Port of `PBXNativeTarget#add_file_references`. [compilerFlags] is the
+  /// second argument there, and [onBuildFile] its block.
+  List<PBXBuildFile> addFileReferences(
+    Iterable<PBXFileReference> fileReferences, {
+    String? compilerFlags,
+    void Function(PBXBuildFile buildFile)? onBuildFile,
+  }) {
+    final files = fileReferences.toList();
+    for (final file in files) {
+      if (file.path == null) {
+        throw ArgumentError.value(
+          file,
+          'fileReferences',
+          'a file reference without a path cannot be added to a build phase',
+        );
+      }
+    }
+
+    final buildFiles = <PBXBuildFile>[];
+    for (final file in files) {
+      final isHeader = MiscConstants.headerFilesExtensions.contains(
+        _extname(file.path!).toLowerCase(),
+      );
+      final phase = isHeader ? headersBuildPhase : sourceBuildPhase;
+      final buildFile = phase.addFileReference(file, avoidDuplicates: true);
+
+      if (compilerFlags != null && compilerFlags.isNotEmpty && !isHeader) {
+        final settings = buildFile.settings ??= <String, dynamic>{};
+        final old = settings['COMPILER_FLAGS'];
+        settings['COMPILER_FLAGS'] = old == null
+            ? compilerFlags
+            : '$old $compilerFlags';
+      }
+
+      onBuildFile?.call(buildFile);
+      buildFiles.add(buildFile);
+    }
+    return buildFiles;
+  }
+
+  /// Adds [resourceFileReferences] to the [resourcesBuildPhase] of the target.
+  ///
+  /// A reference that already has a build file in the phase is skipped (also
+  /// when it appears twice in the list). The phase is created only when there
+  /// is a reference to add it to: an empty list leaves [buildPhases] alone.
+  /// Port of `PBXNativeTarget#add_resources`.
+  void addResources(Iterable<AbstractObject> resourceFileReferences) {
+    for (final file in resourceFileReferences) {
+      resourcesBuildPhase.addFileReference(file, avoidDuplicates: true);
+    }
+  }
+
+  /// Finds the first build phase whose class is exactly [T], or creates one
+  /// and appends it to [buildPhases].
+  /// Port of `PBXNativeTarget#find_or_create_build_phase_by_class`. Ruby also
+  /// memoizes the phase in an instance variable, which goes stale when the
+  /// phase is removed from the target: this looks [buildPhases] up every time.
+  T _findOrCreateBuildPhase<T extends AbstractBuildPhase>(
+    T Function(ObjectGraph, String) factory,
+  ) {
+    for (final phase in buildPhases) {
+      if (phase.runtimeType == T) return phase as T;
+    }
+    final phase = project.newObject(factory);
+    buildPhases.add(phase);
+    return phase;
+  }
 }
 
 // =============================================================================
@@ -850,4 +1038,16 @@ class PBXLegacyTarget extends AbstractTarget {
         super.readAttribute(key, value, objectsByUuidPlist);
     }
   }
+}
+
+/// The extension of [path], with its leading dot, like Ruby's `File.extname`:
+/// a leading dot of the basename does not start an extension (`.h` has none),
+/// a trailing one is one (`foo.` gives `.`). `package:path`'s `extension`
+/// would take `.h` as an extension.
+String _extname(String path) {
+  final trimmed = path.replaceFirst(RegExp(r'/+$'), '');
+  final base = trimmed.substring(trimmed.lastIndexOf('/') + 1);
+  final name = base.replaceFirst(RegExp(r'^\.+'), '');
+  final dot = name.lastIndexOf('.');
+  return dot < 0 ? '' : name.substring(dot);
 }
