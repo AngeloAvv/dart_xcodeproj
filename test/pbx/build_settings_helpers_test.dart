@@ -31,6 +31,65 @@ void main() {
         runner = _target(project, 'Runner');
       });
 
+      group('sdk, platformName and deploymentTarget', () {
+        // Values read by Ruby's `sdk`, `platform_name` and `deployment_target`
+        // on the Runner target (xcodeproj 1.28.1).
+        const expected = {
+          'ios': ('iphoneos', 'ios', '13.0'),
+          'macos': ('macosx', 'osx', '10.15'),
+        };
+
+        test('are read from the resolved settings of the target', () {
+          expect(runner.sdk, equals(expected[name]!.$1));
+          expect(runner.platformName, equals(expected[name]!.$2));
+          expect(runner.deploymentTarget, equals(expected[name]!.$3));
+        });
+
+        test('are null for a target without SDKROOT', () {
+          final bare = project.newObject((g, u) => PBXNativeTarget(g, u))
+            ..buildConfigurationList = project.newObject(
+              (g, u) => XCConfigurationList(g, u),
+            );
+
+          expect(bare.sdk, isNull);
+          expect(bare.platformName, isNull);
+          expect(bare.deploymentTarget, isNull);
+        });
+
+        test('recognise every platform by its SDK', () {
+          const platforms = {
+            'iphoneos17.0': 'ios',
+            'macosx14.0': 'osx',
+            'appletvos': 'tvos',
+            'xros': 'visionos',
+            'watchos': 'watchos',
+            // Like Ruby, which looks for `iphoneos`, not `iphonesimulator`.
+            'iphonesimulator': null,
+            'driverkit': null,
+          };
+          for (final entry in platforms.entries) {
+            runner.buildConfigurationList!.setSetting('SDKROOT', entry.key);
+
+            expect(runner.platformName, equals(entry.value), reason: entry.key);
+          }
+        });
+
+        test('deploymentTarget follows the platform of the SDK', () {
+          runner.buildConfigurationList!
+            ..setSetting('SDKROOT', 'watchos')
+            ..setSetting('WATCHOS_DEPLOYMENT_TARGET', '9.0');
+
+          expect(runner.deploymentTarget, equals('9.0'));
+        });
+
+        test('throw a StateError when the configurations disagree', () {
+          runner.buildConfigurationList!['Debug']!.buildSettings['SDKROOT'] =
+              'watchos';
+
+          expect(() => runner.sdk, throwsStateError);
+        });
+      });
+
       group('buildSettings(name)', () {
         test('the list returns the live settings of the named configuration', () {
           final list = runner.buildConfigurationList!;

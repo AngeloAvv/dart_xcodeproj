@@ -260,6 +260,51 @@ abstract class AbstractTarget extends AbstractObject {
     return list.buildConfigurations;
   }
 
+  /// The SDK the target uses: its `SDKROOT` setting, resolved against the
+  /// project's, or `null` when it has none.
+  /// Throws a [StateError] when the configurations disagree
+  /// (see [commonResolvedBuildSetting]).
+  /// Port of `AbstractTarget#sdk`.
+  String? get sdk => commonResolvedBuildSetting('SDKROOT') as String?;
+
+  /// The name of the platform of the target, one of `ios`, `osx`, `tvos`,
+  /// `visionos` and `watchos` (the symbols of Ruby as strings), or `null`
+  /// when the [sdk] is unknown or missing. Like Ruby it looks for the
+  /// substrings `iphoneos`, `macosx`, `appletvos`, `xros` and `watchos` in
+  /// that order, so `iphonesimulator` has no platform.
+  /// Port of `AbstractTarget#platform_name`.
+  String? get platformName {
+    final sdk = this.sdk;
+    if (sdk == null) return null;
+    if (sdk.contains('iphoneos')) return 'ios';
+    if (sdk.contains('macosx')) return 'osx';
+    if (sdk.contains('appletvos')) return 'tvos';
+    if (sdk.contains('xros')) return 'visionos';
+    if (sdk.contains('watchos')) return 'watchos';
+    return null;
+  }
+
+  /// The name of the build setting that holds the deployment target of each
+  /// platform of [platformName].
+  /// Port of `AbstractTarget::DEPLOYMENT_TARGET_SETTING_BY_PLATFORM_NAME`.
+  static const Map<String, String> deploymentTargetSettingByPlatformName = {
+    'ios': 'IPHONEOS_DEPLOYMENT_TARGET',
+    'osx': 'MACOSX_DEPLOYMENT_TARGET',
+    'tvos': 'TVOS_DEPLOYMENT_TARGET',
+    'visionos': 'XROS_DEPLOYMENT_TARGET',
+    'watchos': 'WATCHOS_DEPLOYMENT_TARGET',
+  };
+
+  /// The deployment target of the target according to its [platformName], or
+  /// `null` when it has no platform or no deployment target.
+  /// Throws a [StateError] when the configurations disagree.
+  /// Port of `AbstractTarget#deployment_target`.
+  String? get deploymentTarget {
+    final setting = deploymentTargetSettingByPlatformName[platformName];
+    if (setting == null) return null;
+    return commonResolvedBuildSetting(setting) as String?;
+  }
+
   /// The build settings of the configuration named [buildConfigurationName],
   /// or `null` when the target has no such configuration. The map is the live
   /// [XCBuildConfiguration.buildSettings] of the configuration, not a copy, so
